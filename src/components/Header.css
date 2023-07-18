@@ -1,0 +1,12 @@
+.logo {
+  margin-left: 16px;
+  font-size: 36px;
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-image: linear-gradient(150deg, #8f29e8, #8d26c4, #ec12c0, #eeb219);
+}
+.logo2 {
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-image: linear-gradient(150deg, yellow, #AD8B65, red, orange, green);
+}

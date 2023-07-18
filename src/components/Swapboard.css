@@ -1,0 +1,27 @@
+#img-setting:hover {
+  transform: rotate(15deg);
+}
+
+#img-reload:hover {
+  transform: rotate(135deg);
+}
+
+input[type="number"] {
+  outline: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  /* for Safari and some other WebKit-based browsers */
+  -moz-appearance: none;
+  /* for Firefox */
+  appearance: none;
+  /* for modern browsers */
+}
+
+.modal-body {
+  background: linear-gradient(45deg, #090b11, #090b11f0, #161922);
+  border: 1px solid white;
+  border-radius: 4px;
+}

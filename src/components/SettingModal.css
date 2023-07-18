@@ -1,0 +1,8 @@
+#setting {
+  max-width: 375px;
+}
+
+.active {
+  color: black !important;
+  background: white !important;
+}

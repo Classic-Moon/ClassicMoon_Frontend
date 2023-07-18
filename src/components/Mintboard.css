@@ -1,0 +1,9 @@
+input[type="number"] {
+  outline: none;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none; /* for Safari and some other WebKit-based browsers */
+  -moz-appearance: none; /* for Firefox */
+  appearance: none; /* for modern browsers */
+}
