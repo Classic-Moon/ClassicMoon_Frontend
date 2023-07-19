@@ -2,9 +2,12 @@ import react, { useEffect, useState } from 'react';
 import { useWallet, WalletStatus } from '@terra-money/wallet-provider';
 import ConnectWallet from './ConnectWallet';
 import TokenModal from './TokenModal';
+import { numberWithCommas } from '../utils/utils';
 import { getConstants } from '../context/constants';
 import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import './Mintboard.css';
 
@@ -15,6 +18,7 @@ const Mintboard = () => {
   // Web3
   const constants = getConstants();
   const walletAddress = useAddress();
+  // const walletAddress = 'terra1f6j6jcqjfk3gxg6kfd0v5ht782y625u349kqqz';
   const { getTokenBalance, getNativeBalance, getNFTList } = useContract();
 
 
@@ -50,6 +54,18 @@ const Mintboard = () => {
   const [fromImg, setFromImg] = useState("img/icon/lunc.png");
   const [toImg, setToImg] = useState("img/icon/clsm.png");
   const [from, setFrom] = useState("LUNC");
+  const [NFT_MOON, setNFT_MOON] = useState([]);
+  const [NFT_FURY, setNFT_FURY] = useState([]);
+
+  const [mintState, setMintState] = useState(true);
+
+  useEffect(() => {
+    if (NFT_MOON.length == 0 && NFT_FURY.length == 0) {
+      setMintState(false);
+    } else {
+      setMintState(true);
+    }
+  }, [NFT_MOON, NFT_FURY]);
 
   useEffect(() => {
     if (typeof value1 !== 'number') {
@@ -74,8 +90,10 @@ const Mintboard = () => {
 
     if (from == "LUNC") {
       console.log("LUNC");
+      toast.success('You minted 5.1M CLSM');
     } else {
       console.log("USTC");
+      toast.error('[USTC]: You minted 5.1M CLSM');
     }
   };
 
@@ -102,7 +120,7 @@ const Mintboard = () => {
           // LUNC tokens balance
           let balance = await getNativeBalance(walletAddress);
           if (balance.length > 0) {
-            setBalance1(balance[0].amount / (10 ** decimals));
+            setBalance1(balance[0].amount);
           }
         })();
       } else {
@@ -117,7 +135,7 @@ const Mintboard = () => {
         (async () => {
           // USTC tokens balance
           let balance = await getTokenBalance(constants.USTC_Contract_Address, walletAddress);
-          setBalance1(parseFloat(balance / (10 ** decimals)));
+          setBalance1(balance);
         })();
       } else {
         setBalance1(0);
@@ -131,28 +149,25 @@ const Mintboard = () => {
       if (walletAddress) {
         // CLSM tokens balance
         let balance = await getTokenBalance(constants.TCLSM_Contract_Address, walletAddress);
-        setBalance2(parseFloat(balance / (10 ** decimals)));
+        setBalance2(balance);
+
+        // LUNC tokens balance
+        balance = await getNativeBalance(walletAddress);
+        if (balance.length > 0) {
+          setBalance1(balance[0].amount);
+        }
+
+        // Get NFT Information
+        let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
+        setNFT_MOON(result.tokens);
+        result = await getNFTList(constants.FURY_P1_NFT_Contract_Address, walletAddress);
+        setNFT_FURY(result.tokens);
       } else {
         setBalance1(0);
         setBalance2(0);
       }
     })()
   }, [walletAddress]);
-
-  useEffect(() => {
-    if (walletAddress) {
-      (async () => {
-        // LUNC tokens balance
-        let balance = await getNativeBalance(walletAddress);
-        if (balance.length > 0) {
-          setBalance1(balance[0].amount / (10 ** decimals));
-        }
-      })();
-
-      let result = getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
-      console.log(result);
-    }
-  }, []);
 
   // :: after 60, 90 days, LUNC, USTC enabled
   // :: less than 200B
@@ -164,8 +179,32 @@ const Mintboard = () => {
     Dynamic Mint is enabled only if the Total Supply of CLSM is less than 200 B CLSM
   */
 
+  const [alertShow, setAlertShow] = useState(true);
+
   return (
     <>
+      <ToastContainer />
+
+      {
+        walletAddress ?
+          ((NFT_MOON.length == 0 && NFT_FURY.length == 0) ?
+            (
+              <div className='tw-rounded-lg tw-border-[1px] tw-border-solid tw-border-[#c42012] tw-bg-[#c4201260] tw-text-white tw-text-[18px] tw-p-[16px] tw-mb-[24px] tw-text-center'>
+                You don't have any CLASSICMOON or LUNC FURY P1 NFTs.
+              </div>
+            ) : (
+              <div className='tw-rounded-lg tw-border-[1px] tw-border-solid tw-border-[#8434cd] tw-text-white tw-text-[18px] tw-p-[16px] tw-mb-[24px]' style={{background: 'linear-gradient(45deg, #8434cd60, #8434cd30, #8434cd60)'}}>
+                <div className='row'>
+                  <div className='col-6 tw-text-center'>ClassicMoon NFTs:&emsp;{NFT_MOON.length}</div>
+                  <div className='col-6 tw-text-center'>LUNC FURY P1 NFTs:&emsp;{NFT_FURY.length}</div>
+                </div>
+              </div>
+            )
+          ) : (
+            <></>
+          )
+      }
+
       <TokenModal selectToken={selectToken} isOpen={isOpen} open={openModal} close={closeModal} />
 
       <div className="tw-flex tw-justify-center">
@@ -178,7 +217,7 @@ const Mintboard = () => {
             <div className="tw-flex tw-justify-between tw-items-center">
               <div>You Burn</div>
               <div>
-                Balance: {balance1}
+                Balance: {numberWithCommas((balance1 / (10 ** decimals)).toFixed(3))}
                 <button
                   className="tw-h-[28px] tw-text-white tw-p-[5px] tw-ml-[5px] tw-border-[1px] tw-border-solid tw-border-[#13214d] tw-rounded-[3px] hover:tw-bg-[#ffffff80]"
                   style={{ background: 'transparent', alignItems: 'center' }}
@@ -211,7 +250,7 @@ const Mintboard = () => {
             <div className="tw-flex tw-justify-between tw-items-center">
               <div>You Get</div>
               <div>
-                Balance: {balance2}
+                Balance: {numberWithCommas((balance2 / (10 ** decimals)).toFixed(3))}
               </div>
             </div>
             <div className="tw-flex tw-justify-between">
@@ -230,8 +269,13 @@ const Mintboard = () => {
           </div>
 
           <div className="tw-flex tw-justify-center tw-mb-[16px]">
-            {status === WalletStatus.WALLET_CONNECTED ? (
-              <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Mint</button>
+            {walletAddress ? (
+              mintState == false ?
+                (
+                  <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b700] hover:tw-bg-[#6812b700] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={() => { }} style={{ cursor: 'not-allowed' }}>Mint</button>
+                ) : (
+                  <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Mint</button>
+                )
             ) : (
               <ConnectWallet />
             )}

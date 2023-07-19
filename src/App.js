@@ -7,6 +7,7 @@ import Dashboard from './pages/dashboard';
 import Swap from './pages/swap';
 import Mint from './pages/mint';
 import Airdrop from './pages/airdrop';
+import MyNFT from './pages/mynft';
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -60,6 +61,7 @@ export default class App extends Component {
                 <Swap path="swap" />
                 <Mint path="mint" />
                 <Airdrop path="airdrop" />
+                <MyNFT path="nfts" />
               </ScrollToTop>
             </PosedRouter>
           </ThemeProvider >

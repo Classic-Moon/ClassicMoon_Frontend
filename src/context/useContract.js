@@ -49,8 +49,6 @@ const ContractProvider = ({ children }) => {
     return res;
   }, [terraClient])
 
-// {"tokens":{"owner":"terra1ayy0g44e29z6nsnsdzg7plqv4mv452hzmw24am"}}
-
   const getNativeBalance = useCallback(async (address) => {
     const [balance] = await terraClient?.bank.balance(address);
     return balance.toData();
@@ -68,6 +66,15 @@ const ContractProvider = ({ children }) => {
     const res = (await axios.get(url)).data;
     return res.data?.balance;
   }, [getURL])
+
+  const loadTokenInfo = useCallback(
+    async (contract) => {
+      const url = getURL(contract, { token_info: {} })
+      const res = (await axios.get(url)).data
+      return res.data
+    },
+    [getURL]
+  )
 
   const getContractConfig = useCallback(async (contract) => {
     const url = getURL(
@@ -241,6 +248,8 @@ const ContractProvider = ({ children }) => {
     setTxType,
     setClickedPrice,
     setUpdateHistory,
+
+    loadTokenInfo,
 
     getNFTList,
 

@@ -5,6 +5,9 @@ import SettingModal from './SettingModal';
 import { getConstants } from '../context/constants';
 import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
+import { numberWithCommas } from '../utils/utils';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import './Swapboard.css'
 
@@ -12,7 +15,7 @@ const Swapboard = () => {
 
   const { status } = useWallet();
 
-  const [decimals, setDecimals] = useState(6);
+  const decimals = 6;
 
   const [balance1, setBalance1] = useState(0);
   const [balance2, setBalance2] = useState(0);
@@ -37,19 +40,19 @@ const Swapboard = () => {
   const { getTokenBalance, getNativeBalance } = useContract();
 
   useEffect(() => {
-    (async() => {
+    (async () => {
       if (walletAddress) {
 
         let balance;
 
         // CLSM tokens balance
         balance = await getTokenBalance(constants.TCLSM_Contract_Address, walletAddress);
-        setBalance1(parseFloat(balance / (10 ** decimals)));
+        setBalance1(balance);
 
         // LUNC tokens balance
         balance = await getNativeBalance(walletAddress);
         if (balance.length > 0) {
-          setBalance2(balance[0].amount / (10 ** decimals));
+          setBalance2(balance[0].amount);
         }
       }
     })()
@@ -107,6 +110,8 @@ const Swapboard = () => {
     const gasPrice = loadGasPrice();
     const slippageTolerance = (parseFloat(slippage === custom ? custom : slippage) / 100).toFixed(3);
     const txDeadlineMinute = txDeadline ? txDeadline : 20; // Default is 20 mins.
+
+    toast.warning('Cannot exceed max CLSM');
   };
 
   const loadGasPrice = () => {
@@ -148,7 +153,10 @@ const Swapboard = () => {
             <div className="tw-flex tw-justify-between tw-items-center">
               <div>You Sell</div>
               <div>
-                Balance: {!isReversed ? balance1 : balance2}
+                Balance: {!isReversed ? 
+                  numberWithCommas((balance1 / (10 ** decimals)).toFixed(2)) : 
+                  numberWithCommas((balance2 / (10 ** decimals)).toFixed(2))
+                }
                 <button
                   className="tw-h-[28px] tw-text-white tw-p-[5px] tw-ml-[5px] tw-border-[1px] tw-border-solid tw-border-[#13214d] tw-rounded-[3px] hover:tw-bg-[#ffffff80]"
                   style={{ background: 'transparent', alignItems: 'center' }}
@@ -181,7 +189,11 @@ const Swapboard = () => {
             <div className="tw-flex tw-justify-between tw-items-center">
               <div>You Get</div>
               <div>
-                Balance: {!isReversed ? balance2 : balance1}
+                Balance: {
+                  !isReversed ? 
+                    numberWithCommas((balance2 / (10 ** decimals)).toFixed(2)) : 
+                    numberWithCommas((balance1 / (10 ** decimals)).toFixed(2))
+                }
               </div>
             </div>
             <div className="tw-flex tw-justify-between">
