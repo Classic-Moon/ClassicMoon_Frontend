@@ -34,56 +34,47 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="container-fluid mtb15 no-fluid">
-        <div className="row sm-gutters">
-          <div className="col-sm-12 col-lg-4 col-xl-3">
-            <Sidebar tabIndex={1} />
-          </div>
-          <div className="col-sm-12 col-lg-8 col-xl-9">
-            <div className="tw-border-solid tw-border-[1px] tw-rounded-lg tw-p-3 tw-mb-5" 
-              style={{background: 'linear-gradient(135deg, #806e996b, #8535bf6b, #794b9b8c)'}}>
-              <div className="row tw-text-white tw-text-[18px] tw-mb-1">
-                <div className="col-6 tw-text-right tw-pr-3">CLSM Total Supply:</div>
-                <div className="col-6">{numberWithCommas(totalSupply / (10 ** decimals))}</div>
-              </div>
-              <div className="row tw-text-white tw-text-[18px] tw-mb-1">
-                <div className="col-6 tw-text-right tw-pr-3">CLSM Price:</div>
-                <div className="col-6">{numberWithCommas(price.toFixed(3))}$</div>
-              </div>
-              <div className="row tw-text-white tw-text-[18px] tw-mb-1">
-                <div className="col-6 tw-text-right tw-pr-3">Pooled CLSM:</div>
-                <div className="col-6">{numberWithCommas(pooledCLSM / (10 ** decimals))}</div>
-              </div>
-              <div className="row tw-text-white tw-text-[18px] tw-mb-1">
-                <div className="col-6 tw-text-right tw-pr-3">Pooled LUNC:</div>
-                <div className="col-6">{numberWithCommas(pooledLUNC / (10 ** decimals))}</div>
-              </div>
-              <div className="row tw-text-white tw-text-[18px] tw-mb-1">
-                <div className="col-6 tw-text-right tw-pr-3">CLSM Burnt:</div>
-                <div className="col-6">{numberWithCommas(burnt / (10 ** decimals))}</div>
-              </div>
-              <div className="row tw-text-white tw-text-[18px] tw-mb-1">
-                <div className="col-6 tw-text-right tw-pr-3">LUNC Burnt (Dynamic Mint):</div>
-                <div className="col-6">{numberWithCommas(luncBurnt / (10 ** decimals))}</div>
-              </div>
-              <div className="row tw-text-white tw-text-[18px]">
-                <div className="col-6 tw-text-right tw-pr-3">USTC Burnt (Dynamic Mint):</div>
-                <div className="col-6">{numberWithCommas(ustcBurnt / (10 ** decimals))}</div>
-              </div>
-            </div>
-
-            <ThemeConsumer>
-              {({ data }) => {
-                return data.theme === 'light' ? (
-                  <TradingChart />
-                ) : (
-                  <TradingChartDark />
-                );
-              }}
-            </ThemeConsumer>
-          </div>
+      <div className="tw-border-solid tw-border-[1px] tw-rounded-lg tw-p-3 tw-mb-5"
+        style={{ background: 'linear-gradient(135deg, #806e996b, #8535bf6b, #794b9b8c)' }}>
+        <div className="row tw-text-white tw-text-[18px] tw-mb-1">
+          <div className="col-6 tw-text-right tw-pr-3">CLSM Total Supply:</div>
+          <div className="col-6">{numberWithCommas(totalSupply / (10 ** decimals))}</div>
+        </div>
+        <div className="row tw-text-white tw-text-[18px] tw-mb-1">
+          <div className="col-6 tw-text-right tw-pr-3">CLSM Price:</div>
+          <div className="col-6">{numberWithCommas(price.toFixed(3))}$</div>
+        </div>
+        <div className="row tw-text-white tw-text-[18px] tw-mb-1">
+          <div className="col-6 tw-text-right tw-pr-3">Pooled CLSM:</div>
+          <div className="col-6">{numberWithCommas(pooledCLSM / (10 ** decimals))}</div>
+        </div>
+        <div className="row tw-text-white tw-text-[18px] tw-mb-1">
+          <div className="col-6 tw-text-right tw-pr-3">Pooled LUNC:</div>
+          <div className="col-6">{numberWithCommas(pooledLUNC / (10 ** decimals))}</div>
+        </div>
+        <div className="row tw-text-white tw-text-[18px] tw-mb-1">
+          <div className="col-6 tw-text-right tw-pr-3">CLSM Burnt:</div>
+          <div className="col-6">{numberWithCommas(burnt / (10 ** decimals))}</div>
+        </div>
+        <div className="row tw-text-white tw-text-[18px] tw-mb-1">
+          <div className="col-6 tw-text-right tw-pr-3">LUNC Burnt (Dynamic Mint):</div>
+          <div className="col-6">{numberWithCommas(luncBurnt / (10 ** decimals))}</div>
+        </div>
+        <div className="row tw-text-white tw-text-[18px]">
+          <div className="col-6 tw-text-right tw-pr-3">USTC Burnt (Dynamic Mint):</div>
+          <div className="col-6">{numberWithCommas(ustcBurnt / (10 ** decimals))}</div>
         </div>
       </div>
+
+      <ThemeConsumer>
+        {({ data }) => {
+          return data.theme === 'light' ? (
+            <TradingChart />
+          ) : (
+            <TradingChartDark />
+          );
+        }}
+      </ThemeConsumer>
     </>
   )
 }

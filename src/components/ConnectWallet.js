@@ -7,9 +7,7 @@ const ConnectWallet = ({ className = '' }) => {
   const { status } = useWallet();
 
   const handleWallet = () => {
-    if (status === WalletStatus.WALLET_CONNECTED) {
-      connectModal.open2();
-    } else {
+    if (status !== WalletStatus.WALLET_CONNECTED) {
       connectModal.open();
     }
   }

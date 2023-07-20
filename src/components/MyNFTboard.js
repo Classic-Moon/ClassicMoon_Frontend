@@ -38,7 +38,8 @@ const MyNFTboard = () => {
 
   return (
     <>
-      <div className='tw-w-full tw-rounded-lg tw-border-[1px] tw-border-solid tw-p-[16px] tw-text-center row'>
+      <div className='tw-w-full tw-rounded-lg tw-border-[1px] tw-border-solid tw-p-[16px] tw-text-center' 
+          style={{ display: 'flex', flexWrap: 'wrap' }}>
         {walletAddress ? (
           (NFT_MOON.length == 0 && NFT_FURY.length == 0) ?
             (
@@ -50,7 +51,7 @@ const MyNFTboard = () => {
                   NFT_MOON.length == 0 ?
                     <></> :
                     (
-                      <><div className='tw-w-full tw-text-center tw-text-white tw-text-[24px]'>CLASSICMOON NFTs</div>
+                      <><div className='tw-w-full tw-text-center tw-text-white tw-text-[24px] tw-py-[16px]'>CLASSICMOON NFTs</div>
                         {
                           NFT_MOON.map((val, index) => {
                             return (
@@ -70,7 +71,7 @@ const MyNFTboard = () => {
                   NFT_FURY.length == 0 ?
                     <></> :
                     (
-                      <><div className='tw-w-full tw-text-center tw-text-white tw-text-[24px]'>LUNC FURY P1 NFTs</div>
+                      <><div className='tw-w-full tw-text-center tw-text-white tw-text-[24px] tw-py-[16px]'>LUNC FURY P1 NFTs</div>
                         {
                           NFT_FURY.map((val, index) => {
                             return (

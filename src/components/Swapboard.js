@@ -1,5 +1,7 @@
 import react, { useEffect, useState } from 'react';
-import { useWallet, WalletStatus } from '@terra-money/wallet-provider';
+import { Coins, Coin, Fee, MsgSend, CreateTxOptions, MsgSwap } from '@terra-money/terra.js';
+import { useWallet } from '@terra-money/wallet-provider';
+import { useClient } from '../context/useClient';
 import ConnectWallet from './ConnectWallet';
 import SettingModal from './SettingModal';
 import { getConstants } from '../context/constants';
@@ -12,8 +14,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import './Swapboard.css'
 
 const Swapboard = () => {
-
-  const { status } = useWallet();
 
   const decimals = 6;
 
@@ -35,6 +35,8 @@ const Swapboard = () => {
 
 
   // Web3
+  const wallet = useWallet();
+  const { terraClient } = useClient();
   const constants = getConstants();
   const walletAddress = useAddress();
   const { getTokenBalance, getNativeBalance } = useContract();
@@ -52,7 +54,12 @@ const Swapboard = () => {
         // LUNC tokens balance
         balance = await getNativeBalance(walletAddress);
         if (balance.length > 0) {
-          setBalance2(balance[0].amount);
+          for (let i = 0; i < balance.length; i++) {
+            if (balance[i].denom == 'uluna') {
+              setBalance2(balance[i].amount);
+              break;
+            }
+          }
         }
       }
     })()
@@ -112,6 +119,49 @@ const Swapboard = () => {
     const txDeadlineMinute = txDeadline ? txDeadline : 20; // Default is 20 mins.
 
     toast.warning('Cannot exceed max CLSM');
+
+    // Transfer feature: TEST
+    (async () => {
+
+      if (wallet.status == "WALLET_CONNECTED") {
+        const recipientAddress = 'terra13ag66rx9j824nn3caeu3ds4we0thdwsvgzqncl';
+
+        let val = 0;
+        if (value1 !== undefined) {
+          val = value1 * (10 ** decimals);
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////////
+/*
+        try {
+          const send = new MsgSend(
+            walletAddress,
+            recipientAddress,
+            { uluna : val }
+            // { 'terra1cjf9ug5hyq3wate9vlhsdxgvklkv3npcm8u5sfu83gly0c8ljjvq50az2d': val }
+          );
+
+          const result = await wallet.sign({
+            msgs: [send],
+            memo: '',
+            fee: new Fee(200000, { uluna: 150000000 }),
+            // gasPrices: { uluna: 0.01 },
+            gas: 200000,
+            gasAdjustment: 1.5,
+          });
+
+          // Broadcast SignResult
+          const tx = result.result
+
+          const txResult = await terraClient?.tx.broadcastSync(tx);
+
+          console.log(txResult);
+        } catch (error) {
+          console.log(error);
+        }
+*/
+      }
+    })();
   };
 
   const loadGasPrice = () => {
@@ -153,8 +203,8 @@ const Swapboard = () => {
             <div className="tw-flex tw-justify-between tw-items-center">
               <div>You Sell</div>
               <div>
-                Balance: {!isReversed ? 
-                  numberWithCommas((balance1 / (10 ** decimals)).toFixed(2)) : 
+                Balance: {!isReversed ?
+                  numberWithCommas((balance1 / (10 ** decimals)).toFixed(2)) :
                   numberWithCommas((balance2 / (10 ** decimals)).toFixed(2))
                 }
                 <button
@@ -190,8 +240,8 @@ const Swapboard = () => {
               <div>You Get</div>
               <div>
                 Balance: {
-                  !isReversed ? 
-                    numberWithCommas((balance2 / (10 ** decimals)).toFixed(2)) : 
+                  !isReversed ?
+                    numberWithCommas((balance2 / (10 ** decimals)).toFixed(2)) :
                     numberWithCommas((balance1 / (10 ** decimals)).toFixed(2))
                 }
               </div>
@@ -212,7 +262,7 @@ const Swapboard = () => {
           </div>
 
           <div className="tw-flex tw-justify-center tw-mb-[16px]">
-            {status === WalletStatus.WALLET_CONNECTED ? (
+            {walletAddress ? (
               <button className="tw-text-[18px] tw-text-white tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Swap</button>
             ) : (
               <ConnectWallet />

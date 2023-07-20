@@ -3,6 +3,7 @@ import { Router, Location, Redirect } from '@reach/router';
 import Header from './components/Header';
 import { ThemeProvider } from './context/ThemeContext';
 import WalletConnectProvider from './context/WalletConnectProvider';
+import Sidebar from './components/Sidebar';
 import Dashboard from './pages/dashboard';
 import Swap from './pages/swap';
 import Mint from './pages/mint';
@@ -53,17 +54,28 @@ export default class App extends Component {
             }}
           >
             <Header />
-            <PosedRouter>
-              <ScrollToTop path="/">
-                <Dashboard exact path="/">
-                  <Redirect to="/" />
-                </Dashboard>
-                <Swap path="swap" />
-                <Mint path="mint" />
-                <Airdrop path="airdrop" />
-                <MyNFT path="nfts" />
-              </ScrollToTop>
-            </PosedRouter>
+
+            <div className="container-fluid mtb15 no-fluid">
+              <div className="row sm-gutters">
+                <div className="col-sm-12 col-lg-4 col-xl-3">
+                  <Sidebar />
+                </div>
+
+                <div className="col-sm-12 col-lg-8 col-xl-9">
+                  <PosedRouter>
+                    <ScrollToTop path="/">
+                      <Dashboard exact path="/">
+                        <Redirect to="/" />
+                      </Dashboard>
+                      <Swap path="swap" />
+                      <Mint path="mint" />
+                      <Airdrop path="airdrop" />
+                      <MyNFT path="nfts" />
+                    </ScrollToTop>
+                  </PosedRouter>
+                </div>
+              </div>
+            </div>
           </ThemeProvider >
           <ToastContainer />
         </WalletConnectProvider>

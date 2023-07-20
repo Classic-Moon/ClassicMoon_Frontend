@@ -18,7 +18,6 @@ const Mintboard = () => {
   // Web3
   const constants = getConstants();
   const walletAddress = useAddress();
-  // const walletAddress = 'terra1f6j6jcqjfk3gxg6kfd0v5ht782y625u349kqqz';
   const { getTokenBalance, getNativeBalance, getNFTList } = useContract();
 
 
@@ -120,7 +119,12 @@ const Mintboard = () => {
           // LUNC tokens balance
           let balance = await getNativeBalance(walletAddress);
           if (balance.length > 0) {
-            setBalance1(balance[0].amount);
+            for (let i = 0; i < balance.length; i++) {
+              if (balance[i].denom == 'uluna') {
+                setBalance1(balance[i].amount);
+                break;
+              }
+            }
           }
         })();
       } else {
@@ -134,8 +138,15 @@ const Mintboard = () => {
       if (walletAddress) {
         (async () => {
           // USTC tokens balance
-          let balance = await getTokenBalance(constants.USTC_Contract_Address, walletAddress);
-          setBalance1(balance);
+          let balance = await getNativeBalance(walletAddress);
+          if (balance.length > 0) {
+            for (let i = 0; i < balance.length; i++) {
+              if (balance[i].denom == 'uusd') {
+                setBalance1(balance[i].amount);
+                break;
+              }
+            }
+          }
         })();
       } else {
         setBalance1(0);
@@ -193,7 +204,7 @@ const Mintboard = () => {
                 You don't have any CLASSICMOON or LUNC FURY P1 NFTs.
               </div>
             ) : (
-              <div className='tw-rounded-lg tw-border-[1px] tw-border-solid tw-border-[#8434cd] tw-text-white tw-text-[18px] tw-p-[16px] tw-mb-[24px]' style={{background: 'linear-gradient(45deg, #8434cd60, #8434cd30, #8434cd60)'}}>
+              <div className='tw-rounded-lg tw-border-[1px] tw-border-solid tw-border-[#8434cd] tw-text-white tw-text-[18px] tw-p-[16px] tw-mb-[24px]' style={{ background: 'linear-gradient(45deg, #8434cd60, #8434cd30, #8434cd60)' }}>
                 <div className='row'>
                   <div className='col-6 tw-text-center'>ClassicMoon NFTs:&emsp;{NFT_MOON.length}</div>
                   <div className='col-6 tw-text-center'>LUNC FURY P1 NFTs:&emsp;{NFT_FURY.length}</div>
