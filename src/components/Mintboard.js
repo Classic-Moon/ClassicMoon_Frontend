@@ -1,57 +1,37 @@
 import react, { useEffect, useState } from 'react';
 import { useWallet, WalletStatus } from '@terra-money/wallet-provider';
+import { Coins, Coin, Fee, Numeric, SignerInfo, MsgSend, CreateTxOptions, MsgSwap, MsgExecuteContract } from '@terra-money/terra.js';
 import ConnectWallet from './ConnectWallet';
+import { useClient } from '../context/useClient';
 import TokenModal from './TokenModal';
-import { numberWithCommas } from '../utils/utils';
+import { calcTax, toAmount, numberWithCommas } from '../utils/utils';
 import { getConstants } from '../context/constants';
 import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import useTax from '../context/useTax';
 
 import './Mintboard.css';
-
-// Dynamic Mint is activated after 60 days (for LUNC).
-// Dynamic Mint is activated after 90 days (for USTC).
-// Dynamic Mint is enabled only if the Total Supply of CLSM is less than 200B CLSM.
 
 const Mintboard = () => {
 
   const decimals = 6;
 
   // Web3
+  const wallet = useWallet();
   const constants = getConstants();
   const walletAddress = useAddress();
+  const { terraClient } = useClient();
   const { getTokenBalance, getNativeBalance, getNFTList,
     IsMintableByLunc, IsMintableByUstc,
     GetAmountMint, GetAmountLunc, GetAmountUstc
   } = useContract();
-
+  const { loadTaxInfo, loadTaxRate, loadGasPrice } = useTax();
 
   const { status } = useWallet();
 
   const MAX_TOTAL_SUPPLY = 200000000000; // 200B
-
-  const [luncEnabled, setLuncEnabled] = useState(false);
-  const [ustcEnabled, setUstcEnabled] = useState(false);
-  const [totalSupply, setTotalSupply] = useState(15000000000);
-
-  const [token1Count, setToken1Count] = useState(0);
-  const [token2Count, setToken2Count] = useState(0);
-
-  const handleChange1 = (e) => {
-    setToken1Count(e.target.value);
-  }
-  const handleChange2 = (e) => {
-    setToken2Count(e.target.value);
-  }
-
-  const mintLUNC = () => {
-    console.log(token1Count);
-  }
-  const mintUSTC = () => {
-    console.log(token2Count);
-  }
 
   const [balance1, setBalance1] = useState(0);
   const [balance2, setBalance2] = useState(0);
@@ -63,21 +43,57 @@ const Mintboard = () => {
   const [NFT_MOON, setNFT_MOON] = useState([]);
   const [NFT_FURY, setNFT_FURY] = useState([]);
 
-  useEffect(() => {
-    if (typeof value1 !== 'number') {
-      setValue2('');
-      return;
-    }
-
-    setValue2(value1 * 100);
-  }, [value1]);
-
   const handleAmount = (e) => {
-    setValue1(e.target.value);
+    procAmount(e.target.value);
+  };
+
+  const procAmount = (tvalue) => {
+    (async () => {
+      try {
+        if (tvalue == '' || tvalue == undefined) {
+          setValue1(undefined);
+          setValue2(undefined);
+        } else {
+          let val = parseInt(parseFloat(tvalue) * (10 ** decimals));
+          if (val > balance1) {
+            val = balance1;
+          }
+
+          setValue1(val);
+
+          let mintval = 0;
+          if (from == "LUNC") {
+            mintval = await GetAmountMint(
+              constants.DYNAMIC_CONTRACT_ADDRESS,
+              {
+                native_token: {
+                  denom: 'uluna'
+                }
+              },
+              val
+            );
+          } else {
+            mintval = await GetAmountMint(
+              constants.DYNAMIC_CONTRACT_ADDRESS,
+              {
+                native_token: {
+                  denom: 'uusd'
+                }
+              },
+              val
+            );
+          }
+
+          setValue2(mintval);
+        }
+      } catch (e) {
+        console.log(e);
+      }
+    })();
   };
 
   const setMaximize = () => {
-    setValue1(balance1 / (10 ** decimals));
+    procAmount(balance1);
   };
 
   const handleSubmit = () => {
@@ -86,23 +102,90 @@ const Mintboard = () => {
         toast.error("You don't have any CLASSICMOON or LUNC FURY P1 NFTs.");
         return;
       }
-
+/*
       if (from == "LUNC") {
-        if (await IsMintableByLunc(walletAddress) != 0) {
+        const mintable = await IsMintableByLunc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
+        if (mintable != 0) {
           toast.error("You're not mintable.");
           return;
         }
       } else {
-        if (await IsMintableByUstc(walletAddress) != 0) {
+        const mintable = await IsMintableByUstc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
+        if (mintable != 0) {
           toast.error("You're not mintable.");
           return;
         }
       }
-
+*/
+      let msg;
       if (from == "LUNC") {
-        
+        msg = new MsgExecuteContract(
+          walletAddress,
+          constants.DYNAMIC_CONTRACT_ADDRESS,
+          {
+            mint: {
+              offer_asset: {
+                info: {
+                  native_token: {
+                    denom: 'uluna'
+                  }
+                },
+                amount: value1.toString()
+              }
+            }
+          }
+        );
       } else {
+        msg = new MsgExecuteContract(
+          walletAddress,
+          constants.DYNAMIC_CONTRACT_ADDRESS,
+          {
+            mint: {
+              offer_asset: {
+                info: {
+                  native_token: {
+                    denom: 'uusd'
+                  }
+                },
+                amount: value1.toString()
+              }
+            }
+          }
+        );
       }
+
+      let gasPrice = await loadGasPrice('uluna');
+
+      let txOptions = {
+        msgs: [msg],
+        memo: undefined,
+        gasPrices: `${gasPrice}uluna`
+      };
+
+      console.log(txOptions);
+
+      // Signing
+      const signMsg = await terraClient?.tx.create(
+        [{ address: walletAddress }],
+        txOptions
+      );
+
+      const taxRate = await loadTaxRate()
+      const taxCap = await loadTaxInfo('uluna');
+      let tax = calcTax(toAmount(value1), taxCap, taxRate)
+
+      let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
+      txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
+
+      // Broadcast SignResult
+      const txResult = await wallet.post(
+        {
+          ...txOptions,
+        },
+        walletAddress
+      );
+
+      console.log(txResult);
     })();
   };
 
@@ -261,7 +344,7 @@ const Mintboard = () => {
                 type="number"
                 className="tw-bg-[#00000000] tw-text-white tw-border-none tw-w-full"
                 placeholder="0.000000"
-                value={value1}
+                value={value1 == undefined ? '' : value1 / (10 ** decimals).toFixed(6)}
                 onChange={handleAmount}
               ></input>
               <div className="tw-flex tw-items-center tw-cursor-pointer" onClick={openModal}>
@@ -289,8 +372,8 @@ const Mintboard = () => {
                 type="number"
                 className="tw-bg-[#00000000] tw-text-white tw-border-none tw-w-full tw-outline-transparent"
                 placeholder="0.000000"
-                value={value2}
-                onChange={(e) => { }}
+                value={value2 == undefined ? '' : value2 / (10 ** decimals).toFixed(6)}
+                readOnly
               ></input>
               <div className="tw-flex tw-items-center">
                 <img src={toImg} className="tw-w-[24px]"></img>
@@ -301,12 +384,7 @@ const Mintboard = () => {
 
           <div className="tw-flex tw-justify-center tw-mb-[16px]">
             {walletAddress ? (
-              // mintState == false ?
-              // (
-              // <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b700] hover:tw-bg-[#6812b700] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={() => { }} style={{ cursor: 'not-allowed' }}>Mint</button>
-              // ) : (
               <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Mint</button>
-              // )
             ) : (
               <ConnectWallet />
             )}

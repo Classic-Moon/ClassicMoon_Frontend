@@ -138,6 +138,39 @@ const ContractProvider = ({ children }) => {
   }, [terraClient])
 
   /* Airdrop */
+  const AirdropGlobalInfo = useCallback(async (contract) => {
+    const res = await terraClient?.wasm.contractQuery(
+      contract,
+      {
+        airdrop_global_info: {}
+      }
+    );
+    return res;
+  }, [terraClient])
+
+  const AirdropNftInfo = useCallback(async (contract, tokenId) => {
+    const res = await terraClient?.wasm.contractQuery(
+      contract,
+      {
+        airdrop_nft_info: {
+          token_id: tokenId
+        }
+      }
+    );
+    return res;
+  }, [terraClient])
+
+  const AirdropUserInfo = useCallback(async (contract, account) => {
+    const res = await terraClient?.wasm.contractQuery(
+      contract,
+      {
+        airdrop_user_info: {
+          account: tokenId
+        }
+      }
+    );
+    return res;
+  }, [terraClient])
 
   /* Common */
   const getNFTList = useCallback(async (contract, address) => {
@@ -190,6 +223,9 @@ const ContractProvider = ({ children }) => {
     GetAmountUstc,
 
     // airdrop
+    AirdropGlobalInfo,
+    AirdropNftInfo,
+    AirdropUserInfo,
 
     // common
     getNativeBalance,

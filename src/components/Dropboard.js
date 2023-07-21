@@ -14,7 +14,7 @@ const Dropboard = () => {
   const { status } = useWallet();
   const constants = getConstants();
   const walletAddress = useAddress();
-  const { getNFTList } = useContract();
+  const { getNFTList, AirdropGlobalInfo, AirdropNftInfo, AirdropUserInfo } = useContract();
 
 
   const [CLASSICMOON, setClassicMoon] = useState([]);
@@ -30,16 +30,21 @@ const Dropboard = () => {
   };
 
   useEffect(() => {
-    
-  }, []);
 
-  /*
-  1. CLSM in Vesting Period = Number of CLSM NFT held * 5.1M CLSM * Number of months 
-      remaining from vesting period
-  2. Available for Airdrop = Number of CLSM tokens that is released from Vesting and 
-      is accumulated for airdrop (the amount of CLSM tokens not withdrawn yet)
-  3. Airdrop Collected = Number of CLSM tokens withdrawn by the user
-  */
+    //   Ok(AirdropUserInfoResponse {
+    //     dropped_amount: airdrop_user_info.dropped_amount,
+    //     last_drop_amount: airdrop_user_info.last_drop_amount,
+    //     last_drop_time: airdrop_user_info.last_drop_time,
+    //     next_drop_time,
+    //     pending_amount: total_pending_amount,
+    // })
+    (async () => {
+      const globalInfo = await AirdropGlobalInfo(constants.AIRDROP_CONTRACT_ADDRESS);
+      console.log(globalInfo);
+
+      //const globalInfo = await AirdropNftInfo();
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -117,8 +122,8 @@ const Dropboard = () => {
 
       {status === WalletStatus.WALLET_CONNECTED ? (
         CLASSICMOON.length > 0 ?
-        <button className="tw-text-[18px] tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => getAirdrop()}>Airdrop</button> :
-        <button className="tw-text-[18px] tw-bg-[#6812b700] hover:tw-bg-[#6812b700] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => {}} style={{cursor: 'not-allowed'}}>Airdrop</button>
+          <button className="tw-text-[18px] tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => getAirdrop()}>Airdrop</button> :
+          <button className="tw-text-[18px] tw-bg-[#6812b700] hover:tw-bg-[#6812b700] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => { }} style={{ cursor: 'not-allowed' }}>Airdrop</button>
       ) : (
         <ConnectWallet />
       )}

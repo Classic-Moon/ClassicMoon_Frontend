@@ -113,12 +113,20 @@ const Swapboard = () => {
   }, [isReversed]);
 
   const handleAmount1 = (e) => {
-    if (e.target.value == '' || e.target.value == undefined) {
+    procAmount1(e.target.value);
+  }
+
+  const handleAmount2 = (e) => {
+    procAmount2(e.target.value);
+  }
+
+  const procAmount1 = (tvalue) => {
+    if (tvalue == '' || tvalue == undefined) {
       // clear
       setValue1(undefined);
       setValue2(undefined);
     } else {
-      let val = parseInt(parseFloat(e.target.value) * (10 ** decimals));
+      let val = parseInt(parseFloat(tvalue) * (10 ** decimals));
       if (val > (!isReversed ? balance1 : balance2)) {
         val = (!isReversed ? balance1 : balance2);
       }
@@ -173,13 +181,14 @@ const Swapboard = () => {
       })();
     }
   };
-  const handleAmount2 = (e) => {
-    if (e.target.value == '' || e.target.value == undefined) {
+
+  const procAmount2 = (tvalue) => {
+    if (tvalue == '' || tvalue == undefined) {
       // clear
       setValue1(undefined);
       setValue2(undefined);
     } else {
-      let val = parseInt(parseFloat(e.target.value) * (10 ** decimals));
+      let val = parseInt(parseFloat(tvalue) * (10 ** decimals));
       if (val > (!isReversed ? balance2 : balance1)) {
         val = (!isReversed ? balance2 : balance1);
       }
@@ -230,7 +239,7 @@ const Swapboard = () => {
 
   const setMaximize = () => {
     // balance -> maximize
-    setValue1(!isReversed ? balance1 : balance2);
+    procAmount1(!isReversed ? balance1 : balance2);
   };
 
   const handleSetting = () => {
