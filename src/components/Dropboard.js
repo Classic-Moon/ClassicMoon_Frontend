@@ -14,7 +14,6 @@ const Dropboard = () => {
   const { status } = useWallet();
   const constants = getConstants();
   const walletAddress = useAddress();
-  // const walletAddress = 'terra1f6j6jcqjfk3gxg6kfd0v5ht782y625u349kqqz';
   const { getNFTList } = useContract();
 
 
@@ -29,6 +28,10 @@ const Dropboard = () => {
 
   const getAirdrop = () => {
   };
+
+  useEffect(() => {
+    
+  }, []);
 
   /*
   1. CLSM in Vesting Period = Number of CLSM NFT held * 5.1M CLSM * Number of months 

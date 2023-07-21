@@ -11,6 +11,10 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import './Mintboard.css';
 
+// Dynamic Mint is activated after 60 days (for LUNC).
+// Dynamic Mint is activated after 90 days (for USTC).
+// Dynamic Mint is enabled only if the Total Supply of CLSM is less than 200B CLSM.
+
 const Mintboard = () => {
 
   const decimals = 6;
@@ -18,7 +22,10 @@ const Mintboard = () => {
   // Web3
   const constants = getConstants();
   const walletAddress = useAddress();
-  const { getTokenBalance, getNativeBalance, getNFTList } = useContract();
+  const { getTokenBalance, getNativeBalance, getNFTList,
+    IsMintableByLunc, IsMintableByUstc,
+    GetAmountMint, GetAmountLunc, GetAmountUstc
+  } = useContract();
 
 
   const { status } = useWallet();
@@ -56,16 +63,6 @@ const Mintboard = () => {
   const [NFT_MOON, setNFT_MOON] = useState([]);
   const [NFT_FURY, setNFT_FURY] = useState([]);
 
-  const [mintState, setMintState] = useState(true);
-
-  useEffect(() => {
-    if (NFT_MOON.length == 0 && NFT_FURY.length == 0) {
-      setMintState(false);
-    } else {
-      setMintState(true);
-    }
-  }, [NFT_MOON, NFT_FURY]);
-
   useEffect(() => {
     if (typeof value1 !== 'number') {
       setValue2('');
@@ -80,25 +77,33 @@ const Mintboard = () => {
   };
 
   const setMaximize = () => {
-    // balance -> maximize
+    setValue1(balance1 / (10 ** decimals));
   };
 
   const handleSubmit = () => {
-    const feeSymbol = "uluna"; // LUNC
-    const gasPrice = loadGasPrice();
+    (async () => {
+      if (NFT_MOON.length == 0 && NFT_FURY.length == 0) {
+        toast.error("You don't have any CLASSICMOON or LUNC FURY P1 NFTs.");
+        return;
+      }
 
-    if (from == "LUNC") {
-      console.log("LUNC");
-      toast.success('You minted 5.1M CLSM');
-    } else {
-      console.log("USTC");
-      toast.error('[USTC]: You minted 5.1M CLSM');
-    }
-  };
+      if (from == "LUNC") {
+        if (await IsMintableByLunc(walletAddress) != 0) {
+          toast.error("You're not mintable.");
+          return;
+        }
+      } else {
+        if (await IsMintableByUstc(walletAddress) != 0) {
+          toast.error("You're not mintable.");
+          return;
+        }
+      }
 
-  const loadGasPrice = () => {
-    // load gasPrice
-    return 10;
+      if (from == "LUNC") {
+        
+      } else {
+      }
+    })();
   };
 
   const [isOpen, setOpen] = useState(false);
@@ -110,21 +115,28 @@ const Mintboard = () => {
   };
 
   const selectToken = (val) => {
+
+    setValue1('');
+
     if (val == 1) {
       setFrom("LUNC");
       setFromImg("img/icon/lunc.png");
 
       if (walletAddress) {
         (async () => {
-          // LUNC tokens balance
-          let balance = await getNativeBalance(walletAddress);
-          if (balance.length > 0) {
-            for (let i = 0; i < balance.length; i++) {
-              if (balance[i].denom == 'uluna') {
-                setBalance1(balance[i].amount);
-                break;
+          try {
+            // LUNC tokens balance
+            let balance = await getNativeBalance(walletAddress);
+            if (balance.length > 0) {
+              for (let i = 0; i < balance.length; i++) {
+                if (balance[i].denom == 'uluna') {
+                  setBalance1(balance[i].amount);
+                  break;
+                }
               }
             }
+          } catch (e) {
+            console.log(e);
           }
         })();
       } else {
@@ -137,15 +149,19 @@ const Mintboard = () => {
 
       if (walletAddress) {
         (async () => {
-          // USTC tokens balance
-          let balance = await getNativeBalance(walletAddress);
-          if (balance.length > 0) {
-            for (let i = 0; i < balance.length; i++) {
-              if (balance[i].denom == 'uusd') {
-                setBalance1(balance[i].amount);
-                break;
+          try {
+            // USTC tokens balance
+            let balance = await getNativeBalance(walletAddress);
+            if (balance.length > 0) {
+              for (let i = 0; i < balance.length; i++) {
+                if (balance[i].denom == 'uusd') {
+                  setBalance1(balance[i].amount);
+                  break;
+                }
               }
             }
+          } catch (e) {
+            console.log(e);
           }
         })();
       } else {
@@ -158,21 +174,25 @@ const Mintboard = () => {
   useEffect(() => {
     (async () => {
       if (walletAddress) {
-        // CLSM tokens balance
-        let balance = await getTokenBalance(constants.TCLSM_Contract_Address, walletAddress);
-        setBalance2(balance);
+        try {
+          // CLSM tokens balance
+          let balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, walletAddress);
+          setBalance2(balance);
 
-        // LUNC tokens balance
-        balance = await getNativeBalance(walletAddress);
-        if (balance.length > 0) {
-          setBalance1(balance[0].amount);
+          // LUNC tokens balance
+          balance = await getNativeBalance(walletAddress);
+          if (balance.length > 0) {
+            setBalance1(balance[0].amount);
+          }
+
+          // Get NFT Information
+          let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
+          setNFT_MOON(result.tokens);
+          result = await getNFTList(constants.FURY_P1_NFT_Contract_Address, walletAddress);
+          setNFT_FURY(result.tokens);
+        } catch (e) {
+          console.log(e);
         }
-
-        // Get NFT Information
-        let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
-        setNFT_MOON(result.tokens);
-        result = await getNFTList(constants.FURY_P1_NFT_Contract_Address, walletAddress);
-        setNFT_FURY(result.tokens);
       } else {
         setBalance1(0);
         setBalance2(0);
@@ -281,12 +301,12 @@ const Mintboard = () => {
 
           <div className="tw-flex tw-justify-center tw-mb-[16px]">
             {walletAddress ? (
-              mintState == false ?
-                (
-                  <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b700] hover:tw-bg-[#6812b700] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={() => { }} style={{ cursor: 'not-allowed' }}>Mint</button>
-                ) : (
-                  <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Mint</button>
-                )
+              // mintState == false ?
+              // (
+              // <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b700] hover:tw-bg-[#6812b700] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={() => { }} style={{ cursor: 'not-allowed' }}>Mint</button>
+              // ) : (
+              <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Mint</button>
+              // )
             ) : (
               <ConnectWallet />
             )}

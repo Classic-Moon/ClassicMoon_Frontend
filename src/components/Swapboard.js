@@ -1,5 +1,5 @@
 import react, { useEffect, useState } from 'react';
-import { Coins, Coin, Fee, MsgSend, CreateTxOptions, MsgSwap } from '@terra-money/terra.js';
+import { Coins, Coin, Fee, Numeric, SignerInfo, MsgSend, CreateTxOptions, MsgSwap, MsgExecuteContract } from '@terra-money/terra.js';
 import { useWallet } from '@terra-money/wallet-provider';
 import { useClient } from '../context/useClient';
 import ConnectWallet from './ConnectWallet';
@@ -7,15 +7,20 @@ import SettingModal from './SettingModal';
 import { getConstants } from '../context/constants';
 import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
-import { numberWithCommas } from '../utils/utils';
+import { calcTax, toAmount, numberWithCommas } from '../utils/utils';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import useTax from '../context/useTax';
 
 import './Swapboard.css'
+import { LocalConvenienceStoreOutlined, SettingsInputAntenna } from '@mui/icons-material';
+import { relativeTimeRounding } from 'moment/moment';
 
 const Swapboard = () => {
 
   const decimals = 6;
+
+  const [isDisabledSwap, setIsDisabledSwap] = useState(false);
 
   const [balance1, setBalance1] = useState(0);
   const [balance2, setBalance2] = useState(0);
@@ -33,13 +38,13 @@ const Swapboard = () => {
   const [custom, setCustom] = useState(undefined);
   const [txDeadline, setTxDeadline] = useState(20);
 
-
   // Web3
   const wallet = useWallet();
   const { terraClient } = useClient();
   const constants = getConstants();
   const walletAddress = useAddress();
-  const { getTokenBalance, getNativeBalance } = useContract();
+  const { getTokenBalance, getNativeBalance, getSimulation, getReverseSimulation } = useContract();
+  const { loadTaxInfo, loadTaxRate, loadGasPrice } = useTax();
 
   useEffect(() => {
     (async () => {
@@ -48,7 +53,7 @@ const Swapboard = () => {
         let balance;
 
         // CLSM tokens balance
-        balance = await getTokenBalance(constants.TCLSM_Contract_Address, walletAddress);
+        balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, walletAddress);
         setBalance1(balance);
 
         // LUNC tokens balance
@@ -61,9 +66,44 @@ const Swapboard = () => {
             }
           }
         }
+      } else {
+        setValue1(undefined);
+        setValue2(undefined);
       }
     })()
   }, [walletAddress]);
+
+  const reload = async () => {
+    try {
+      let balance;
+
+      // CLSM tokens balance
+      balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, walletAddress);
+
+      if (!isReversed) {
+        setBalance1(balance);
+      } else {
+        setBalance2(balance);
+      }
+
+      // LUNC tokens balance
+      balance = await getNativeBalance(walletAddress);
+      if (balance.length > 0) {
+        for (let i = 0; i < balance.length; i++) {
+          if (balance[i].denom == 'uluna') {
+            if (!isReversed) {
+              setBalance2(balance[i].amount);
+            } else {
+              setBalance1(balance[i].amount);
+            }
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
   useEffect(() => {
     setFrom(!isReversed ? "CLSM" : "LUNC");
@@ -72,26 +112,118 @@ const Swapboard = () => {
     setToImg(!isReversed ? "img/icon/lunc.png" : "img/icon/clsm.png");
   }, [isReversed]);
 
-  useEffect(() => {
-    if (value1 === undefined) {
-      return;
-    }
-    let data = parseFloat(value1).toFixed(decimals);
-
-    if (isReversed == false) {
-      setValue2(data * 10);
+  const handleAmount1 = (e) => {
+    if (e.target.value == '' || e.target.value == undefined) {
+      // clear
+      setValue1(undefined);
+      setValue2(undefined);
     } else {
-      setValue2(data * 100);
-    }
-  }, [value1]);
+      let val = parseInt(parseFloat(e.target.value) * (10 ** decimals));
+      if (val > (!isReversed ? balance1 : balance2)) {
+        val = (!isReversed ? balance1 : balance2);
+      }
 
-  const handleAmount = (e) => {
-    setValue1(e.target.value);
+      setValue1(val);
+
+      (async () => {
+        try {
+          let simulation;
+          if (isReversed == false) {
+            simulation = await getSimulation(
+              constants.POOL_CONTRACT_ADDRESS,
+              {
+                token: {
+                  contract_addr: constants.TOKEN_CONTRACT_ADDRESS
+                }
+              },
+              val
+            );
+
+            console.log(simulation, balance2);
+
+            let amount = parseInt(simulation.return_amount);
+            if (amount > balance2) {
+              setValue2(balance2);
+            } else {
+              setValue2(amount);
+            }
+          } else {
+            simulation = await getSimulation(
+              constants.POOL_CONTRACT_ADDRESS,
+              {
+                native_token: {
+                  denom: 'uluna'
+                }
+              },
+              val
+            );
+
+            console.log(simulation, balance1);
+
+            let amount = parseInt(simulation.return_amount);
+            if (amount > balance1) {
+              setValue2(balance1);
+            } else {
+              setValue2(amount);
+            }
+          }
+        } catch (e) {
+          console.log(e);
+        }
+      })();
+    }
+  };
+  const handleAmount2 = (e) => {
+    if (e.target.value == '' || e.target.value == undefined) {
+      // clear
+      setValue1(undefined);
+      setValue2(undefined);
+    } else {
+      let val = parseInt(parseFloat(e.target.value) * (10 ** decimals));
+      if (val > (!isReversed ? balance2 : balance1)) {
+        val = (!isReversed ? balance2 : balance1);
+      }
+
+      setValue2(val);
+
+      (async () => {
+        try {
+          let simulation;
+          if (isReversed == false) {
+            simulation = await getReverseSimulation(
+              constants.POOL_CONTRACT_ADDRESS,
+              {
+                native_token: {
+                  denom: 'uluna'
+                }
+              },
+              val
+            );
+
+            setValue1(simulation.offer_amount);
+          } else {
+            simulation = await getReverseSimulation(
+              constants.POOL_CONTRACT_ADDRESS,
+              {
+                token: {
+                  contract_addr: constants.TOKEN_CONTRACT_ADDRESS
+                }
+              },
+              val
+            );
+
+            setValue1(simulation.offer_amount);
+          }
+        } catch (e) {
+          console.log(e);
+        }
+      })();
+    }
   };
 
   const handleSwitchToken = () => {
-    setValue1('');
-    setValue2('');
+    setValue1(undefined);
+    setValue2(undefined);
 
     setIsReversed(!isReversed);
   };
@@ -106,67 +238,96 @@ const Swapboard = () => {
   };
 
   const handleReload = () => {
-    setValue1('');
-    setValue2('');
+    setValue1(undefined);
+    setValue2(undefined);
 
     setIsReversed(false);
   };
 
   const handleSubmit = () => {
     const feeSymbol = "uluna"; // LUNC
-    const gasPrice = loadGasPrice();
     const slippageTolerance = (parseFloat(slippage === custom ? custom : slippage) / 100).toFixed(3);
     const txDeadlineMinute = txDeadline ? txDeadline : 20; // Default is 20 mins.
 
-    toast.warning('Cannot exceed max CLSM');
+    console.log(slippageTolerance);
 
-    // Transfer feature: TEST
     (async () => {
-
       if (wallet.status == "WALLET_CONNECTED") {
-        const recipientAddress = 'terra13ag66rx9j824nn3caeu3ds4we0thdwsvgzqncl';
 
-        let val = 0;
-        if (value1 !== undefined) {
-          val = value1 * (10 ** decimals);
-        }
+        setIsDisabledSwap(true);
 
-        //////////////////////////////////////////////////////////////////////////////////////////////
-/*
-        try {
-          const send = new MsgSend(
+        let msg;
+        if (isReversed == false) {
+          const hookMsg = {
+            swap: {}
+          };
+          msg = new MsgExecuteContract(
             walletAddress,
-            recipientAddress,
-            { uluna : val }
-            // { 'terra1cjf9ug5hyq3wate9vlhsdxgvklkv3npcm8u5sfu83gly0c8ljjvq50az2d': val }
+            constants.TOKEN_CONTRACT_ADDRESS,
+            {
+              send: {
+                contract: constants.POOL_CONTRACT_ADDRESS,
+                amount: value1,
+                msg: btoa(JSON.stringify(hookMsg))
+              }
+            }
           );
-
-          const result = await wallet.sign({
-            msgs: [send],
-            memo: '',
-            fee: new Fee(200000, { uluna: 150000000 }),
-            // gasPrices: { uluna: 0.01 },
-            gas: 200000,
-            gasAdjustment: 1.5,
-          });
-
-          // Broadcast SignResult
-          const tx = result.result
-
-          const txResult = await terraClient?.tx.broadcastSync(tx);
-
-          console.log(txResult);
-        } catch (error) {
-          console.log(error);
+        } else {
+          msg = new MsgExecuteContract(
+            walletAddress,
+            constants.POOL_CONTRACT_ADDRESS,
+            {
+              swap: {
+                offer_asset: {
+                  info: {
+                    native_token: {
+                      denom: 'uluna'
+                    }
+                  },
+                  amount: value1.toString()
+                },
+              }
+            },
+            [new Coin('uluna', value1)]
+          );
         }
-*/
+
+        let gasPrice = await loadGasPrice('uluna');
+
+        let txOptions = {
+          msgs: [msg],
+          memo: undefined,
+          gasPrices: `${gasPrice}uluna`
+        };
+
+        // Signing
+        const signMsg = await terraClient?.tx.create(
+          [{ address: walletAddress }],
+          txOptions
+        );
+
+        const taxRate = await loadTaxRate()
+        const taxCap = await loadTaxInfo('uluna');
+        let tax = calcTax(toAmount(value1), taxCap, taxRate)
+
+        let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
+        txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
+
+        // Broadcast SignResult
+        const txResult = await wallet.post(
+          {
+            ...txOptions,
+          },
+          walletAddress
+        );
+
+        console.log(txResult);
+
+        setIsDisabledSwap(false);
+
+        reload();
       }
     })();
-  };
-
-  const loadGasPrice = () => {
-    // load gasPrice
-    return 10;
   };
 
   const [isOpen, setOpen] = useState(false);
@@ -219,8 +380,8 @@ const Swapboard = () => {
                 type="number"
                 className="tw-bg-[#00000000] tw-text-white tw-border-none tw-w-full"
                 placeholder="0.000000"
-                value={value1}
-                onChange={handleAmount}
+                value={value1 == undefined ? '' : value1 / (10 ** decimals).toFixed(6)}
+                onChange={handleAmount1}
               ></input>
               <div className="tw-flex tw-items-center">
                 <img src={fromImg} className="tw-w-[24px]"></img>
@@ -251,8 +412,8 @@ const Swapboard = () => {
                 type="number"
                 className="tw-bg-[#00000000] tw-text-white tw-border-none tw-w-full tw-outline-transparent"
                 placeholder="0.000000"
-                value={value2}
-                readOnly
+                value={value2 == undefined ? '' : value2 / (10 ** decimals).toFixed(6)}
+                onChange={handleAmount2}
               ></input>
               <div className="tw-flex tw-items-center">
                 <img src={toImg} className="tw-w-[24px]"></img>
@@ -263,7 +424,7 @@ const Swapboard = () => {
 
           <div className="tw-flex tw-justify-center tw-mb-[16px]">
             {walletAddress ? (
-              <button className="tw-text-[18px] tw-text-white tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Swap</button>
+              <button className="tw-text-[18px] tw-text-white tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit} disabled={isDisabledSwap}>Swap</button>
             ) : (
               <ConnectWallet />
             )}
