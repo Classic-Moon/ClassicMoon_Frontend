@@ -157,12 +157,12 @@ const Mintboard = () => {
           );
         }
 
-        let gasPrice = await loadGasPrice('uluna');
+        let gasPrice = await loadGasPrice(from == "LUNC" ? 'uluna' : 'uusd');
 
         let txOptions = {
           msgs: [msg],
           memo: undefined,
-          gasPrices: `${gasPrice}uluna`
+          gasPrices: from == "LUNC" ? `${gasPrice}uluna` : `${gasPrice}uusd`
         };
 
         // Signing
@@ -172,10 +172,10 @@ const Mintboard = () => {
         );
 
         const taxRate = await loadTaxRate()
-        const taxCap = await loadTaxInfo('uluna');
+        const taxCap = await loadTaxInfo(from == "LUNC" ? 'uluna' : 'uusd');
         let tax = calcTax(toAmount(value1), taxCap, taxRate)
 
-        let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
+        let fee = signMsg.auth_info.fee.amount.add(new Coin(from == "LUNC" ? 'uluna' : 'uusd', tax));
         txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
 
         // Broadcast SignResult

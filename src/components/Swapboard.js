@@ -234,9 +234,11 @@ const Swapboard = () => {
     openModal();
   };
 
-  const handleReload = () => {
+  const handleReload = async () => {
     setValue1(undefined);
     setValue2(undefined);
+
+    await reload();
 
     setIsReversed(false);
   };
@@ -263,7 +265,7 @@ const Swapboard = () => {
               {
                 send: {
                   contract: constants.POOL_CONTRACT_ADDRESS,
-                  amount: value1,
+                  amount: value1.toString(),
                   msg: btoa(JSON.stringify(hookMsg))
                 }
               }
@@ -340,8 +342,6 @@ const Swapboard = () => {
           }
 
           setIsDisabledSwap(false);
-
-          reload();
         }
       } catch (e) {
         console.log(e);

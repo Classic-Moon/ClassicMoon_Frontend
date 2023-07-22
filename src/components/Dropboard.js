@@ -1,6 +1,6 @@
 import react, { useEffect, useState } from 'react';
 import { useWallet, WalletStatus } from '@terra-money/wallet-provider';
-import { Coins, Coin, Fee, Numeric, SignerInfo, MsgSend, CreateTxOptions, MsgSwap, MsgExecuteContract } from '@terra-money/terra.js';
+import { MsgExecuteContract } from '@terra-money/terra.js';
 import ConnectWallet from './ConnectWallet';
 import { calcTax, toAmount, numberWithCommas } from '../utils/utils';
 import { getConstants } from '../context/constants';
@@ -8,15 +8,14 @@ import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
 import { useClient } from '../context/useClient';
 import useTax from '../context/useTax';
-import { DateTimePicker } from '@mui/lab';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const Dropboard = () => {
 
-  const releaseDate = Date.now();
+  const releaseDate = 10010879000;
   const DAY = 1000 * 60 * 60 * 24;
-  const MONTH = 1000 * 60 * 60 * 24 * 30;
+  const MONTH = DAY * 30;
 
   // Web3
   const wallet = useWallet();
@@ -44,10 +43,38 @@ const Dropboard = () => {
 
     var date = new Date(val);
     return date.getFullYear().toString() + "-" + (date.getMonth() + 1).toString() +
-         "-" + date.getDate().toString() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+      "-" + date.getDate().toString() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
   }
 
   const getAirdrop = () => {
+    // (async () => {
+    //   const NFT_tokenAddress = 'terra15tuwx3r2peluez6sh4yauk4ztry5dg5els4rye534v9n8su5gacs259p77';
+    //   const NFT_FURY = 'terra1g7we2dvzgyfyh39zg44n0rlyh9xh4ym9z0wut7';
+
+    //   const recp = 'terra1675g95dpcxulmwgyc0hvf66uxn7vcrr5az2vuk';
+
+    //   const msg = new MsgExecuteContract(
+    //     walletAddress,
+    //     NFT_FURY,
+    //     {
+    //       transfer_nft: {
+    //         recipient: recp,
+    //         token_id: '984'
+    //       }
+    //     }
+    //   );
+
+    //   // Signing
+    //   const result = await wallet.sign({ msgs: [msg] });
+
+    //   // Broadcast SignResult
+    //   const tx = result.result
+    //   const txResult = await terraClient?.tx.broadcastSync(tx);
+
+    //   console.log(txResult);
+    // })();
+    // return;
+
     if (disabled == true) {
       toast.error("You don't have any CLASSICMOON NFTs.");
       return;
@@ -70,8 +97,8 @@ const Dropboard = () => {
           return;
         }
 
-        if (Date.now() < next_drop_time) {
-          toast.error('Airdrop will be available after ' + ((next_drop_time - Date.now()) / DAY + 1).toString() + ' days later.');
+        if (Date.now() + 1000 * 60 < next_drop_time) {
+          toast.error('Airdrop will be available after ' + (parseInt((next_drop_time - Date.now()) / DAY) + 1).toString() + ' days later.');
           return;
         }
 
@@ -91,7 +118,6 @@ const Dropboard = () => {
         const txResult = await terraClient?.tx.broadcastSync(tx);
 
         console.log(txResult);
-        //toast.info('Successfully airdropped.');
       } catch (e) {
         console.log(e);
       }
@@ -103,8 +129,8 @@ const Dropboard = () => {
       try {
         if (walletAddress) {
           const userInfo = await AirdropUserInfo(constants.AIRDROP_CONTRACT_ADDRESS, walletAddress);
-          set_last_drop_time(userInfo.last_drop_time);
-          set_next_drop_time(userInfo.next_drop_time);
+          set_last_drop_time(parseInt(userInfo.last_drop_time) * 1000);
+          set_next_drop_time(parseInt(userInfo.next_drop_time) * 1000);
           set_pending_amount(userInfo.pending_amount);
           set_dropped_amount(userInfo.dropped_amount);
 
@@ -114,7 +140,7 @@ const Dropboard = () => {
           let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
           setClassicMoon(result.tokens);
 
-          setVesting(parseInt((Date.now() - releaseDate) / MONTH) * CLASSICMOON.length * 5100000);
+          setVesting(parseInt((Date.now() - releaseDate) / MONTH) * CLASSICMOON.length * 5100000 * (10 ** 6));
         } else {
           setClassicMoon([]);
         }

@@ -14,6 +14,7 @@ const Dashboard = () => {
   const [timer, setTimer] = useState(0);
 
   const [totalSupply, setTotalSupply] = useState(0);
+  const [circulationSupply, setCirculationSupply] = useState(0);
   const [symbol, setSymbol] = useState('');
   const [price, setPrice] = useState(0);
   const [pooledCLSM, setPooledCLSM] = useState(0);
@@ -42,7 +43,7 @@ const Dashboard = () => {
         let balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, constants.POOL_CONTRACT_ADDRESS);
         setPooledCLSM(balance);
         let arr = await getNativeBalance(constants.POOL_CONTRACT_ADDRESS);
-        for (let i = 0; i < arr.length; i ++) {
+        for (let i = 0; i < arr.length; i++) {
           if (arr[i].denom == 'uluna') {
             setPooledLUNC(arr[i].amount);
             break;
@@ -52,7 +53,12 @@ const Dashboard = () => {
         balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, constants.BURN_ADDRESS);
         setBurnt(balance);
 
+        let treasury = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, constants.TREASURY_WALLET_ADDRESS);
+        console.log(treasury);
+        setCirculationSupply(6800000000000000000 - treasury - balance);
+
         const dynamicInfo = await getDynamicMint(constants.DYNAMIC_CONTRACT_ADDRESS);
+        console.log(dynamicInfo);
         setLuncBurnt(dynamicInfo.total_lunc_burn_amount);
         setUstcBurnt(dynamicInfo.total_ustc_burn_amount);
         setCLSMMinted(dynamicInfo.total_minted_clsm_amount);
@@ -131,6 +137,10 @@ const Dashboard = () => {
           <div className="col-6">{numberWithCommas(totalSupply / (10 ** decimals))}&nbsp;{symbol}</div>
         </div>
         <div className="row tw-text-white tw-text-[18px] tw-mb-1">
+          <div className="col-6 tw-text-right tw-pr-3">CLSM Circulation Supply:</div>
+          <div className="col-6">{numberWithCommas(circulationSupply / (10 ** decimals))}&nbsp;{symbol}</div>
+        </div>
+        <div className="row tw-text-white tw-text-[18px] tw-mb-1">
           <div className="col-6 tw-text-right tw-pr-3">CLSM Price:</div>
           <div className="col-6">{numberWithCommas(price.toFixed(3))}$</div>
         </div>
@@ -156,11 +166,11 @@ const Dashboard = () => {
         </div>
         <div className="row tw-text-white tw-text-[18px]">
           <div className="col-6 tw-text-right tw-pr-3">CLSM Minted (Dynamic Mint):</div>
-          <div className="col-6">{numberWithCommas(ustcBurnt / (10 ** decimals))} USTC</div>
+          <div className="col-6">{numberWithCommas(clsmMinted / (10 ** decimals))} {symbol}</div>
         </div>
       </div>
 
-      <div style={{display: 'none'}}>
+      <div style={{ display: 'none' }}>
         <canvas id="myChart"></canvas>
       </div>
 
