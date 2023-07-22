@@ -13,8 +13,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import useTax from '../context/useTax';
 
 import './Swapboard.css'
-import { LocalConvenienceStoreOutlined, SettingsInputAntenna } from '@mui/icons-material';
-import { relativeTimeRounding } from 'moment/moment';
 
 const Swapboard = () => {
 
@@ -149,12 +147,7 @@ const Swapboard = () => {
 
             console.log(simulation, balance2);
 
-            let amount = parseInt(simulation.return_amount);
-            if (amount > balance2) {
-              setValue2(balance2);
-            } else {
-              setValue2(amount);
-            }
+            setValue2(simulation.return_amount);
           } else {
             simulation = await getSimulation(
               constants.POOL_CONTRACT_ADDRESS,
@@ -168,12 +161,7 @@ const Swapboard = () => {
 
             console.log(simulation, balance1);
 
-            let amount = parseInt(simulation.return_amount);
-            if (amount > balance1) {
-              setValue2(balance1);
-            } else {
-              setValue2(amount);
-            }
+            setValue2(simulation.return_amount);
           }
         } catch (e) {
           console.log(e);
@@ -258,83 +246,105 @@ const Swapboard = () => {
     const slippageTolerance = (parseFloat(slippage === custom ? custom : slippage) / 100).toFixed(3);
     const txDeadlineMinute = txDeadline ? txDeadline : 20; // Default is 20 mins.
 
-    console.log(slippageTolerance);
-
     (async () => {
-      if (wallet.status == "WALLET_CONNECTED") {
+      try {
+        if (wallet.status == "WALLET_CONNECTED") {
 
-        setIsDisabledSwap(true);
+          setIsDisabledSwap(true);
 
-        let msg;
-        if (isReversed == false) {
-          const hookMsg = {
-            swap: {}
-          };
-          msg = new MsgExecuteContract(
-            walletAddress,
-            constants.TOKEN_CONTRACT_ADDRESS,
-            {
-              send: {
-                contract: constants.POOL_CONTRACT_ADDRESS,
-                amount: value1,
-                msg: btoa(JSON.stringify(hookMsg))
+          let msg;
+          if (isReversed == false) {
+            const hookMsg = {
+              swap: {}
+            };
+            msg = new MsgExecuteContract(
+              walletAddress,
+              constants.TOKEN_CONTRACT_ADDRESS,
+              {
+                send: {
+                  contract: constants.POOL_CONTRACT_ADDRESS,
+                  amount: value1,
+                  msg: btoa(JSON.stringify(hookMsg))
+                }
               }
-            }
-          );
-        } else {
-          msg = new MsgExecuteContract(
-            walletAddress,
-            constants.POOL_CONTRACT_ADDRESS,
-            {
-              swap: {
-                offer_asset: {
-                  info: {
-                    native_token: {
-                      denom: 'uluna'
-                    }
+            );
+
+            let txOptions = {
+              msgs: [msg]
+            };
+
+            // Signing
+            const signMsg = await terraClient?.tx.create(
+              [{ address: walletAddress }],
+              txOptions
+            );
+
+            // Broadcast SignResult
+            const txResult = await wallet.post(
+              {
+                ...txOptions,
+              },
+              walletAddress
+            );
+
+            console.log(txResult);
+          } else {
+            msg = new MsgExecuteContract(
+              walletAddress,
+              constants.POOL_CONTRACT_ADDRESS,
+              {
+                swap: {
+                  offer_asset: {
+                    info: {
+                      native_token: {
+                        denom: 'uluna'
+                      }
+                    },
+                    amount: value1.toString()
                   },
-                  amount: value1.toString()
-                },
-              }
-            },
-            [new Coin('uluna', value1)]
-          );
+                }
+              },
+              [new Coin('uluna', value1.toString())]
+            );
+
+            let gasPrice = await loadGasPrice('uluna');
+
+            let txOptions = {
+              msgs: [msg],
+              memo: undefined,
+              gasPrices: `${gasPrice}uluna`
+            };
+
+            // Signing
+            const signMsg = await terraClient?.tx.create(
+              [{ address: walletAddress }],
+              txOptions
+            );
+
+            const taxRate = await loadTaxRate()
+            const taxCap = await loadTaxInfo('uluna');
+            let tax = calcTax(toAmount(value1), taxCap, taxRate)
+
+            let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
+            txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
+
+            // Broadcast SignResult
+            const txResult = await wallet.post(
+              {
+                ...txOptions,
+              },
+              walletAddress
+            );
+
+            console.log(txResult);
+          }
+
+          setIsDisabledSwap(false);
+
+          reload();
         }
-
-        let gasPrice = await loadGasPrice('uluna');
-
-        let txOptions = {
-          msgs: [msg],
-          memo: undefined,
-          gasPrices: `${gasPrice}uluna`
-        };
-
-        // Signing
-        const signMsg = await terraClient?.tx.create(
-          [{ address: walletAddress }],
-          txOptions
-        );
-
-        const taxRate = await loadTaxRate()
-        const taxCap = await loadTaxInfo('uluna');
-        let tax = calcTax(toAmount(value1), taxCap, taxRate)
-
-        let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
-        txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
-
-        // Broadcast SignResult
-        const txResult = await wallet.post(
-          {
-            ...txOptions,
-          },
-          walletAddress
-        );
-
-        console.log(txResult);
-
-        setIsDisabledSwap(false);
-
-        reload();
+      } catch (e) {
+        console.log(e);
       }
     })();
   };

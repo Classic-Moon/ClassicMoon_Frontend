@@ -98,94 +98,96 @@ const Mintboard = () => {
 
   const handleSubmit = () => {
     (async () => {
-      if (NFT_MOON.length == 0 && NFT_FURY.length == 0) {
-        toast.error("You don't have any CLASSICMOON or LUNC FURY P1 NFTs.");
-        return;
-      }
-/*
-      if (from == "LUNC") {
-        const mintable = await IsMintableByLunc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
-        if (mintable != 0) {
-          toast.error("You're not mintable.");
+      try {
+        if (NFT_MOON.length == 0 && NFT_FURY.length == 0) {
+          toast.error("You don't have any CLASSICMOON or LUNC FURY P1 NFTs.");
           return;
         }
-      } else {
-        const mintable = await IsMintableByUstc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
-        if (mintable != 0) {
-          toast.error("You're not mintable.");
-          return;
+
+        if (from == "LUNC") {
+          const mintable = await IsMintableByLunc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
+          if (mintable != 0) {
+            toast.error("You're not allowed to mint by LUNC.");
+            return;
+          }
+        } else {
+          const mintable = await IsMintableByUstc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
+          if (mintable != 0) {
+            toast.error("You're not allowed to mint by USTC.");
+            return;
+          }
         }
-      }
-*/
-      let msg;
-      if (from == "LUNC") {
-        msg = new MsgExecuteContract(
-          walletAddress,
-          constants.DYNAMIC_CONTRACT_ADDRESS,
-          {
-            mint: {
-              offer_asset: {
-                info: {
-                  native_token: {
-                    denom: 'uluna'
-                  }
-                },
-                amount: value1.toString()
+
+        let msg;
+        if (from == "LUNC") {
+          msg = new MsgExecuteContract(
+            walletAddress,
+            constants.DYNAMIC_CONTRACT_ADDRESS,
+            {
+              mint: {
+                offer_asset: {
+                  info: {
+                    native_token: {
+                      denom: 'uluna'
+                    }
+                  },
+                  amount: value1.toString()
+                }
               }
-            }
-          }
-        );
-      } else {
-        msg = new MsgExecuteContract(
-          walletAddress,
-          constants.DYNAMIC_CONTRACT_ADDRESS,
-          {
-            mint: {
-              offer_asset: {
-                info: {
-                  native_token: {
-                    denom: 'uusd'
-                  }
-                },
-                amount: value1.toString()
+            },
+            new Coins({ uluna: value1.toString() })
+          );
+        } else {
+          msg = new MsgExecuteContract(
+            walletAddress,
+            constants.DYNAMIC_CONTRACT_ADDRESS,
+            {
+              mint: {
+                offer_asset: {
+                  info: {
+                    native_token: {
+                      denom: 'uusd'
+                    }
+                  },
+                  amount: value1.toString()
+                }
               }
-            }
-          }
+            },
+            new Coins({ uusd: value1.toString() })
+          );
+        }
+
+        let gasPrice = await loadGasPrice('uluna');
+
+        let txOptions = {
+          msgs: [msg],
+          memo: undefined,
+          gasPrices: `${gasPrice}uluna`
+        };
+
+        // Signing
+        const signMsg = await terraClient?.tx.create(
+          [{ address: walletAddress }],
+          txOptions
         );
+
+        const taxRate = await loadTaxRate()
+        const taxCap = await loadTaxInfo('uluna');
+        let tax = calcTax(toAmount(value1), taxCap, taxRate)
+
+        let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
+        txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
+
+        // Broadcast SignResult
+        const txResult = await wallet.post(
+          { ...txOptions },
+          walletAddress
+        );
+
+        console.log(txResult);
+      } catch (e) {
+        console.log(e);
       }
-
-      let gasPrice = await loadGasPrice('uluna');
-
-      let txOptions = {
-        msgs: [msg],
-        memo: undefined,
-        gasPrices: `${gasPrice}uluna`
-      };
-
-      console.log(txOptions);
-
-      // Signing
-      const signMsg = await terraClient?.tx.create(
-        [{ address: walletAddress }],
-        txOptions
-      );
-
-      const taxRate = await loadTaxRate()
-      const taxCap = await loadTaxInfo('uluna');
-      let tax = calcTax(toAmount(value1), taxCap, taxRate)
-
-      let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
-      txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
-
-      // Broadcast SignResult
-      const txResult = await wallet.post(
-        {
-          ...txOptions,
-        },
-        walletAddress
-      );
-
-      console.log(txResult);
     })();
   };
 

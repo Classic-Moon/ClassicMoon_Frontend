@@ -160,12 +160,12 @@ const ContractProvider = ({ children }) => {
     return res;
   }, [terraClient])
 
-  const AirdropUserInfo = useCallback(async (contract, account) => {
+  const AirdropUserInfo = useCallback(async (contract, address) => {
     const res = await terraClient?.wasm.contractQuery(
       contract,
       {
         airdrop_user_info: {
-          account: tokenId
+          account: address
         }
       }
     );

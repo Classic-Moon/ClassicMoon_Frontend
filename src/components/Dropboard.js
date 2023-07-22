@@ -1,59 +1,130 @@
 import react, { useEffect, useState } from 'react';
 import { useWallet, WalletStatus } from '@terra-money/wallet-provider';
+import { Coins, Coin, Fee, Numeric, SignerInfo, MsgSend, CreateTxOptions, MsgSwap, MsgExecuteContract } from '@terra-money/terra.js';
 import ConnectWallet from './ConnectWallet';
-import { numberWithCommas } from '../utils/utils';
+import { calcTax, toAmount, numberWithCommas } from '../utils/utils';
 import { getConstants } from '../context/constants';
 import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
+import { useClient } from '../context/useClient';
+import useTax from '../context/useTax';
+import { DateTimePicker } from '@mui/lab';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Dropboard = () => {
 
-  const CLSM_REWARD = 51000000; // 5.1M
+  const releaseDate = Date.now();
+  const DAY = 1000 * 60 * 60 * 24;
+  const MONTH = 1000 * 60 * 60 * 24 * 30;
 
   // Web3
-  const { status } = useWallet();
+  const wallet = useWallet();
   const constants = getConstants();
   const walletAddress = useAddress();
-  const { getNFTList, AirdropGlobalInfo, AirdropNftInfo, AirdropUserInfo } = useContract();
+  const { terraClient } = useClient();
+  const { getNFTList, AirdropUserInfo } = useContract();
 
+  const { loadTaxInfo, loadTaxRate, loadGasPrice } = useTax();
 
   const [CLASSICMOON, setClassicMoon] = useState([]);
 
-  const [lastAirdropped, setLastAirdropped] = useState('2023-07-07 15:15:15');
-  const [nextAirdrop, setNextAirdrop] = useState('2023-08-06 15:00:00');
+  const [blocked, setBlocked] = useState(0);
 
-  const [CLSMInVestingPeriod, setCLSMInVestingPeriod] = useState(CLSM_REWARD * 10);
-  const [AvaibleForAirdrop, setAvaibleForAirdrop] = useState(CLSM_REWARD * 3);
-  const [AirdropCollected, setAirdropCollected] = useState(CLSM_REWARD * 9);
+  const [last_drop_time, set_last_drop_time] = useState(0);
+  const [next_drop_time, set_next_drop_time] = useState(0);
+  const [pending_amount, set_pending_amount] = useState(0);
+  const [dropped_amount, set_dropped_amount] = useState(0);
+  const [vesting, setVesting] = useState(0);
+
+  const [disabled, setDisabled] = useState(false);
+
+  const convDate = (val) => {
+    if (val == 0) return '';
+
+    var date = new Date(val);
+    return date.getFullYear().toString() + "-" + (date.getMonth() + 1).toString() +
+         "-" + date.getDate().toString() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+  }
 
   const getAirdrop = () => {
+    if (disabled == true) {
+      toast.error("You don't have any CLASSICMOON NFTs.");
+      return;
+    }
+
+    if (blocked == 1) {
+      return;
+    }
+
+    setBlocked(1);
+    setTimeout(() => {
+      setBlocked(0);
+    }, 2000);
+
+    (async () => {
+
+      try {
+        if (CLASSICMOON.length == 0) {
+          toast.error("You don't have any CLASSICMOON NFTs.");
+          return;
+        }
+
+        if (Date.now() < next_drop_time) {
+          toast.error('Airdrop will be available after ' + ((next_drop_time - Date.now()) / DAY + 1).toString() + ' days later.');
+          return;
+        }
+
+        let msg = new MsgExecuteContract(
+          walletAddress,
+          constants.AIRDROP_CONTRACT_ADDRESS,
+          {
+            airdrop: {}
+          }
+        );
+
+        // Signing
+        const result = await wallet.sign({ msgs: [msg] });
+
+        // Broadcast SignResult
+        const tx = result.result
+        const txResult = await terraClient?.tx.broadcastSync(tx);
+
+        console.log(txResult);
+        //toast.info('Successfully airdropped.');
+      } catch (e) {
+        console.log(e);
+      }
+    })();
   };
 
   useEffect(() => {
-
-    //   Ok(AirdropUserInfoResponse {
-    //     dropped_amount: airdrop_user_info.dropped_amount,
-    //     last_drop_amount: airdrop_user_info.last_drop_amount,
-    //     last_drop_time: airdrop_user_info.last_drop_time,
-    //     next_drop_time,
-    //     pending_amount: total_pending_amount,
-    // })
     (async () => {
-      const globalInfo = await AirdropGlobalInfo(constants.AIRDROP_CONTRACT_ADDRESS);
-      console.log(globalInfo);
+      try {
+        if (walletAddress) {
+          const userInfo = await AirdropUserInfo(constants.AIRDROP_CONTRACT_ADDRESS, walletAddress);
+          set_last_drop_time(userInfo.last_drop_time);
+          set_next_drop_time(userInfo.next_drop_time);
+          set_pending_amount(userInfo.pending_amount);
+          set_dropped_amount(userInfo.dropped_amount);
 
-      //const globalInfo = await AirdropNftInfo();
-    })();
-  }, []);
+          console.log(userInfo);
 
-  useEffect(() => {
-    (async () => {
-      if (walletAddress) {
-        // Get ClassicMoon NFT Information
-        let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
-        setClassicMoon(result.tokens);
-      } else {
-        setClassicMoon([]);
+          // Get ClassicMoon NFT Information
+          let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
+          setClassicMoon(result.tokens);
+
+          setVesting(parseInt((Date.now() - releaseDate) / MONTH) * CLASSICMOON.length * 5100000);
+        } else {
+          setClassicMoon([]);
+        }
+      } catch (e) {
+        if (e.response.data.message.startsWith("No NFT:")) {
+          toast.error("You don't have any CLASSICMOON NFTs.");
+          setDisabled(true);
+        } else {
+          console.log(e);
+        }
       }
     })()
   }, [walletAddress]);
@@ -79,17 +150,17 @@ const Dropboard = () => {
             Last Airdropped:
           </div>
           <div className='col-6'>
-            {lastAirdropped}
+            {convDate(last_drop_time)}
           </div>
         </div>
       </div>
       <div className="tw-pl-[20px] tw-py-[12px] tw-text-left tw-border-solid tw-border-t-0 tw-border-l-0 tw-border-r-0 tw-border-b-[1px] tw-border-b-[#ffffff80]">
         <div className='row'>
           <div className='col-6'>
-            Next Airdrop is avaible from:
+            Next Airdrop is available from:
           </div>
           <div className='col-6'>
-            {nextAirdrop}
+            {convDate(next_drop_time)}
           </div>
         </div>
       </div>
@@ -99,7 +170,7 @@ const Dropboard = () => {
             CLSM in Vesting Period:
           </div>
           <div className='col-6'>
-            {numberWithCommas(CLSMInVestingPeriod)}
+            {numberWithCommas(vesting)}
           </div>
         </div>
         <div className='row'>
@@ -107,7 +178,7 @@ const Dropboard = () => {
             Available for Airdrop:
           </div>
           <div className='col-6'>
-            {numberWithCommas(AvaibleForAirdrop)}
+            {numberWithCommas(pending_amount)}
           </div>
         </div>
         <div className='row'>
@@ -115,20 +186,22 @@ const Dropboard = () => {
             Airdrop Collected:
           </div>
           <div className='col-6'>
-            {numberWithCommas(AirdropCollected)}
+            {numberWithCommas(dropped_amount)}
           </div>
         </div>
       </div>
 
-      {status === WalletStatus.WALLET_CONNECTED ? (
-        CLASSICMOON.length > 0 ?
-          <button className="tw-text-[18px] tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => getAirdrop()}>Airdrop</button> :
-          <button className="tw-text-[18px] tw-bg-[#6812b700] hover:tw-bg-[#6812b700] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => { }} style={{ cursor: 'not-allowed' }}>Airdrop</button>
+      {walletAddress ? (
+        <button className="tw-text-[18px] tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => getAirdrop()} disabled={disabled}>Airdrop</button>
       ) : (
         <ConnectWallet />
       )}
     </div>
   )
 }
-
+/*
+CLSM in Vesting Period = Number of CLSM NFT held * 5.1M CLSM * Number of months remaining from vesting period
+Available for Airdrop = Number of CLSM tokens that is released from Vesting and is accumulated for airdrop (the amount of CLSM tokens not withdrawn yet)
+Airdrop Collected = Number of CLSM tokens withdrawn by the user
+*/
 export default Dropboard;

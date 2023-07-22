@@ -27,16 +27,23 @@ const Header = () => {
     }
   }, [])
 
+  function handleClick() {
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById('menu-' + i).classList.remove('active1');
+    }
+    document.getElementById('menu-1').classList.add('active1');
+  }
+
   return (
     <>
       <header className="light-bb">
         <Navbar expand="lg">
-          <Link className="navbar-brand" to="/">
+          <Link className="navbar-brand" to="/" onClick={handleClick}>
             <ThemeConsumer>
               {({ data }) => {
                 return (
                   <div className="tw-flex tw-items-center">
-                    <img src={'/logo.png'} alt="logo" style={{width: '373px'}}/>
+                    <img src={'/logo.png'} alt="logo" style={{ width: '373px' }} />
                   </div>
                 )
               }}

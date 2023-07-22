@@ -5,6 +5,8 @@ import useAddress from '../context/useAddress';
 import { numberWithCommas } from '../utils/utils';
 import Chart from 'chart.js/auto'
 
+import TradingChartDark from '../components/TradingChartDark';
+
 const Dashboard = () => {
 
   const decimals = 6;
@@ -158,9 +160,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div>
+      <div style={{display: 'none'}}>
         <canvas id="myChart"></canvas>
       </div>
+
+      <TradingChartDark />
     </>
   )
 }
