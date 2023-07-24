@@ -1,6 +1,6 @@
 import react, { useEffect, useState } from 'react';
 import { useWallet, WalletStatus } from '@terra-money/wallet-provider';
-import { MsgExecuteContract } from '@terra-money/terra.js';
+import { Coin, Fee, MsgExecuteContract } from '@terra-money/terra.js';
 import ConnectWallet from './ConnectWallet';
 import { calcTax, toAmount, numberWithCommas } from '../utils/utils';
 import { getConstants } from '../context/constants';
@@ -13,9 +13,10 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const Dropboard = () => {
 
-  const releaseDate = 10010879000;
+  const releaseDate = 1690072000 * 1000;
   const DAY = 1000 * 60 * 60 * 24;
-  const MONTH = DAY * 30;
+  // const MONTH = DAY * 30;
+  const MONTH = 1000 * 60 * 30;
 
   // Web3
   const wallet = useWallet();
@@ -110,12 +111,34 @@ const Dropboard = () => {
           }
         );
 
+        let gasPrice = await loadGasPrice('uluna');
+
+        let txOptions = {
+          msgs: [msg],
+          memo: undefined,
+          gasPrices: `${gasPrice}uluna`
+        };
+
         // Signing
-        const result = await wallet.sign({ msgs: [msg] });
+        const signMsg = await terraClient?.tx.create(
+          [{ address: walletAddress }],
+          txOptions
+        );
+
+        const taxRate = await loadTaxRate()
+        const taxCap = await loadTaxInfo('uluna');
+        let tax = calcTax(0, taxCap, taxRate)
+
+        let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
+        txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
 
         // Broadcast SignResult
-        const tx = result.result
-        const txResult = await terraClient?.tx.broadcastSync(tx);
+        const txResult = await wallet.post(
+          {
+            ...txOptions,
+          },
+          walletAddress
+        );
 
         console.log(txResult);
       } catch (e) {
@@ -134,13 +157,17 @@ const Dropboard = () => {
           set_pending_amount(userInfo.pending_amount);
           set_dropped_amount(userInfo.dropped_amount);
 
-          console.log(userInfo);
-
           // Get ClassicMoon NFT Information
           let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
           setClassicMoon(result.tokens);
 
-          setVesting(parseInt((Date.now() - releaseDate) / MONTH) * CLASSICMOON.length * 5100000 * (10 ** 6));
+          const now = Date.now();
+
+          console.log(now, releaseDate + MONTH * 20);
+
+          if (releaseDate + MONTH * 20 > now) {
+            setVesting(parseInt((releaseDate + MONTH * 20 - now) / MONTH) * CLASSICMOON.length * 5100000 * (10 ** 6));
+          }
         } else {
           setClassicMoon([]);
         }
@@ -196,7 +223,7 @@ const Dropboard = () => {
             CLSM in Vesting Period:
           </div>
           <div className='col-6'>
-            {numberWithCommas(vesting)}
+            {numberWithCommas(parseInt(vesting / (10 ** 6)))}
           </div>
         </div>
         <div className='row'>
@@ -204,7 +231,7 @@ const Dropboard = () => {
             Available for Airdrop:
           </div>
           <div className='col-6'>
-            {numberWithCommas(pending_amount)}
+            {numberWithCommas(parseInt(pending_amount / (10 ** 6)))}
           </div>
         </div>
         <div className='row'>
@@ -212,7 +239,7 @@ const Dropboard = () => {
             Airdrop Collected:
           </div>
           <div className='col-6'>
-            {numberWithCommas(dropped_amount)}
+            {numberWithCommas(parseInt(dropped_amount / (10 ** 6)))}
           </div>
         </div>
       </div>

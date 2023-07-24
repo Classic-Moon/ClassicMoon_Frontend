@@ -35,8 +35,8 @@ const Mintboard = () => {
 
   const [balance1, setBalance1] = useState(0);
   const [balance2, setBalance2] = useState(0);
-  const [value1, setValue1] = useState('');
-  const [value2, setValue2] = useState('');
+  const [value1, setValue1] = useState(undefined);
+  const [value2, setValue2] = useState(undefined);
   const [fromImg, setFromImg] = useState("img/icon/lunc.png");
   const [toImg, setToImg] = useState("img/icon/clsm.png");
   const [from, setFrom] = useState("LUNC");
@@ -173,7 +173,7 @@ const Mintboard = () => {
 
         const taxRate = await loadTaxRate()
         const taxCap = await loadTaxInfo(from == "LUNC" ? 'uluna' : 'uusd');
-        let tax = calcTax(toAmount(value1), taxCap, taxRate)
+        let tax = calcTax(value1, taxCap, taxRate)
 
         let fee = signMsg.auth_info.fee.amount.add(new Coin(from == "LUNC" ? 'uluna' : 'uusd', tax));
         txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
@@ -186,7 +186,11 @@ const Mintboard = () => {
 
         console.log(txResult);
       } catch (e) {
-        console.log(e);
+        if (e.response.data.message.startsWith("200 Billion LIMIT")) {
+          toast.error("CLSM Circulation Supply is not less than 200B.");
+        } else {
+          console.log(e);
+        }
       }
     })();
   };

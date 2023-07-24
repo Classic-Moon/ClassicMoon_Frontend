@@ -271,8 +271,12 @@ const Swapboard = () => {
               }
             );
 
+            let gasPrice = await loadGasPrice('uluna');
+
             let txOptions = {
-              msgs: [msg]
+              msgs: [msg],
+              memo: undefined,
+              gasPrices: `${gasPrice}uluna`
             };
 
             // Signing
@@ -280,6 +284,13 @@ const Swapboard = () => {
               [{ address: walletAddress }],
               txOptions
             );
+
+            const taxRate = await loadTaxRate()
+            const taxCap = await loadTaxInfo('uluna');
+            let tax = calcTax(0, taxCap, taxRate)
+
+            let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
+            txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
 
             // Broadcast SignResult
             const txResult = await wallet.post(
@@ -325,7 +336,7 @@ const Swapboard = () => {
 
             const taxRate = await loadTaxRate()
             const taxCap = await loadTaxInfo('uluna');
-            let tax = calcTax(toAmount(value1), taxCap, taxRate)
+            let tax = calcTax(value1, taxCap, taxRate)
 
             let fee = signMsg.auth_info.fee.amount.add(new Coin('uluna', tax));
             txOptions.fee = new Fee(signMsg.auth_info.fee.gas_limit, fee)
@@ -374,7 +385,7 @@ const Swapboard = () => {
           <div className="tw-text-white tw-flex tw-justify-between tw-items-center tw-px-[16px] tw-pt-[16px]">
             <div className="tw-text-[24px] tw-px-[12px] tw-border-[1px] tw-border-solid tw-border-[#13214d] tw-rounded-[5px]">Swap</div>
             <div>
-              <button style={{ background: 'transparent' }} className="tw-border-0" onClick={handleSetting}><img id="img-setting" src="img/icon-settings.svg"></img></button>
+              {/* <button style={{ background: 'transparent' }} className="tw-border-0" onClick={handleSetting}><img id="img-setting" src="img/icon-settings.svg"></img></button> */}
               <button style={{ background: 'transparent' }} className="tw-border-0 tw-ml-3" onClick={handleReload}><img id="img-reload" src="img/icon-reload.svg"></img></button>
             </div>
           </div>
