@@ -97,7 +97,7 @@ const Mintboard = () => {
   const handleSubmit = () => {
 
     if (value1 == undefined || value2 == undefined) {
-      toast.error('Type the input value.');
+      toast.info('Type the input value.');
       return;
     }
 
