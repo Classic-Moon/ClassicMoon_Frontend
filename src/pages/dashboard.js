@@ -37,7 +37,6 @@ const Dashboard = () => {
       try {
         const data = await getTokenInfo(constants.TOKEN_CONTRACT_ADDRESS);
         setTotalSupply(data.total_supply);
-        console.log(data);
         setSymbol(data.symbol);
 
         let balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, constants.POOL_CONTRACT_ADDRESS);
@@ -53,10 +52,8 @@ const Dashboard = () => {
         balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, constants.BURN_ADDRESS);
         setBurnt(balance);
 
-
         let treasury = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, constants.TREASURY_WALLET_ADDRESS);
-        console.log(treasury);
-        setCirculationSupply(6800000000000000000 - treasury - balance);
+        setCirculationSupply(parseInt(data.total_supply) - treasury - balance);
 
         const dynamicInfo = await getDynamicMint(constants.DYNAMIC_CONTRACT_ADDRESS);
         setLuncBurnt(dynamicInfo.total_lunc_burn_amount);
@@ -134,7 +131,7 @@ const Dashboard = () => {
         style={{ background: 'linear-gradient(135deg, #806e996b, #8535bf6b, #794b9b8c)' }}>
         <div className="row tw-text-white tw-text-[18px] tw-mb-1">
           <div className="col-6 tw-text-right tw-pr-3">CLSM Total Supply:</div>
-          <div className="col-6">{numberWithCommas(totalSupply / (10 ** decimals))}&nbsp;{symbol}</div>
+          <div className="col-6">{numberWithCommas((totalSupply - burnt) / (10 ** decimals))}&nbsp;{symbol}</div>
         </div>
         <div className="row tw-text-white tw-text-[18px] tw-mb-1">
           <div className="col-6 tw-text-right tw-pr-3">CLSM Circulation Supply:</div>

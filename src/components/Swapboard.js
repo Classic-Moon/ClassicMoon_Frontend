@@ -7,8 +7,8 @@ import SettingModal from './SettingModal';
 import { getConstants } from '../context/constants';
 import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
-import { calcTax, toAmount, numberWithCommas } from '../utils/utils';
-import { ToastContainer, toast } from 'react-toastify';
+import { calcTax, numberWithCommas } from '../utils/utils';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useTax from '../context/useTax';
 
@@ -45,63 +45,71 @@ const Swapboard = () => {
   const { loadTaxInfo, loadTaxRate, loadGasPrice } = useTax();
 
   useEffect(() => {
-    (async () => {
+    const intervalId = setInterval(() => {
       if (walletAddress) {
+        setIsDisabledSwap(false);
 
-        let balance;
+        (async () => {
+          try {
+            let balance;
 
-        // CLSM tokens balance
-        balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, walletAddress);
-        setBalance1(balance);
+            // CLSM tokens balance
+            balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, walletAddress);
 
-        // LUNC tokens balance
-        balance = await getNativeBalance(walletAddress);
-        if (balance.length > 0) {
-          for (let i = 0; i < balance.length; i++) {
-            if (balance[i].denom == 'uluna') {
-              setBalance2(balance[i].amount);
-              break;
+            setBalance1(balance);
+
+            // LUNC tokens balance
+            balance = await getNativeBalance(walletAddress);
+            if (balance.length > 0) {
+              for (let i = 0; i < balance.length; i++) {
+                if (balance[i].denom == 'uluna') {
+                  setBalance2(balance[i].amount);
+                  break;
+                }
+              }
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        })();
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [walletAddress, isReversed]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (walletAddress) {
+
+          let balance;
+
+          // CLSM tokens balance
+          balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, walletAddress);
+          setBalance1(balance);
+
+          // LUNC tokens balance
+          balance = await getNativeBalance(walletAddress);
+          if (balance.length > 0) {
+            for (let i = 0; i < balance.length; i++) {
+              if (balance[i].denom == 'uluna') {
+                setBalance2(balance[i].amount);
+                break;
+              }
             }
           }
+        } else {
+          setValue1(undefined);
+          setValue2(undefined);
         }
-      } else {
-        setValue1(undefined);
-        setValue2(undefined);
+      } catch (e) {
+        console.log(e);
       }
     })()
   }, [walletAddress]);
-
-  const reload = async () => {
-    try {
-      let balance;
-
-      // CLSM tokens balance
-      balance = await getTokenBalance(constants.TOKEN_CONTRACT_ADDRESS, walletAddress);
-
-      if (!isReversed) {
-        setBalance1(balance);
-      } else {
-        setBalance2(balance);
-      }
-
-      // LUNC tokens balance
-      balance = await getNativeBalance(walletAddress);
-      if (balance.length > 0) {
-        for (let i = 0; i < balance.length; i++) {
-          if (balance[i].denom == 'uluna') {
-            if (!isReversed) {
-              setBalance2(balance[i].amount);
-            } else {
-              setBalance1(balance[i].amount);
-            }
-            break;
-          }
-        }
-      }
-    } catch (e) {
-      console.log(e);
-    }
-  };
 
   useEffect(() => {
     setFrom(!isReversed ? "CLSM" : "LUNC");
@@ -145,8 +153,6 @@ const Swapboard = () => {
               val
             );
 
-            console.log(simulation, balance2);
-
             setValue2(simulation.return_amount);
           } else {
             simulation = await getSimulation(
@@ -158,8 +164,6 @@ const Swapboard = () => {
               },
               val
             );
-
-            console.log(simulation, balance1);
 
             setValue2(simulation.return_amount);
           }
@@ -238,15 +242,15 @@ const Swapboard = () => {
     setValue1(undefined);
     setValue2(undefined);
 
-    await reload();
-
     setIsReversed(false);
   };
 
   const handleSubmit = () => {
-    const feeSymbol = "uluna"; // LUNC
-    const slippageTolerance = (parseFloat(slippage === custom ? custom : slippage) / 100).toFixed(3);
-    const txDeadlineMinute = txDeadline ? txDeadline : 20; // Default is 20 mins.
+
+    if (value1 == undefined || value2 == undefined) {
+      toast.info("Type the input value.");
+      return;
+    }
 
     (async () => {
       try {
@@ -355,6 +359,7 @@ const Swapboard = () => {
           setIsDisabledSwap(false);
         }
       } catch (e) {
+        setIsDisabledSwap(false);
         console.log(e);
       }
     })();

@@ -1,14 +1,14 @@
 import react, { useEffect, useState } from 'react';
-import { useWallet, WalletStatus } from '@terra-money/wallet-provider';
-import { Coins, Coin, Fee, Numeric, SignerInfo, MsgSend, CreateTxOptions, MsgSwap, MsgExecuteContract } from '@terra-money/terra.js';
+import { useWallet } from '@terra-money/wallet-provider';
+import { Coins, Coin, Fee, MsgExecuteContract } from '@terra-money/terra.js';
 import ConnectWallet from './ConnectWallet';
 import { useClient } from '../context/useClient';
 import TokenModal from './TokenModal';
-import { calcTax, toAmount, numberWithCommas } from '../utils/utils';
+import { calcTax, numberWithCommas } from '../utils/utils';
 import { getConstants } from '../context/constants';
 import { useContract } from '../context/useContract';
 import useAddress from '../context/useAddress';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useTax from '../context/useTax';
 
@@ -24,14 +24,9 @@ const Mintboard = () => {
   const walletAddress = useAddress();
   const { terraClient } = useClient();
   const { getTokenBalance, getNativeBalance, getNFTList,
-    IsMintableByLunc, IsMintableByUstc,
-    GetAmountMint, GetAmountLunc, GetAmountUstc
+    IsMintableByLunc, IsMintableByUstc, GetAmountMint
   } = useContract();
   const { loadTaxInfo, loadTaxRate, loadGasPrice } = useTax();
-
-  const { status } = useWallet();
-
-  const MAX_TOTAL_SUPPLY = 200000000000; // 200B
 
   const [balance1, setBalance1] = useState(0);
   const [balance2, setBalance2] = useState(0);
@@ -43,17 +38,20 @@ const Mintboard = () => {
   const [NFT_MOON, setNFT_MOON] = useState([]);
   const [NFT_FURY, setNFT_FURY] = useState([]);
 
+  const [disabled, setDisabled] = useState(0);
+
   const handleAmount = (e) => {
     procAmount(e.target.value);
   };
 
   const procAmount = (tvalue) => {
-    (async () => {
-      try {
-        if (tvalue == '' || tvalue == undefined) {
-          setValue1(undefined);
-          setValue2(undefined);
-        } else {
+    if (tvalue == '' || tvalue == undefined) {
+      // clear
+      setValue1(undefined);
+      setValue2(undefined);
+    } else {
+      (async () => {
+        try {
           let val = parseInt(parseFloat(tvalue) * (10 ** decimals));
           if (val > balance1) {
             val = balance1;
@@ -85,11 +83,11 @@ const Mintboard = () => {
           }
 
           setValue2(mintval);
+        } catch (e) {
+          console.log(e);
         }
-      } catch (e) {
-        console.log(e);
-      }
-    })();
+      })();
+    }
   };
 
   const setMaximize = () => {
@@ -97,6 +95,12 @@ const Mintboard = () => {
   };
 
   const handleSubmit = () => {
+
+    if (value1 == undefined || value2 == undefined) {
+      toast.error('Type the input value.');
+      return;
+    }
+
     (async () => {
       try {
         if (NFT_MOON.length == 0 && NFT_FURY.length == 0) {
@@ -107,16 +111,18 @@ const Mintboard = () => {
         if (from == "LUNC") {
           const mintable = await IsMintableByLunc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
           if (mintable != 0) {
-            toast.error("You're not allowed to mint by LUNC.");
+            toast.error("Mint option is not available now.");
             return;
           }
         } else {
           const mintable = await IsMintableByUstc(constants.DYNAMIC_CONTRACT_ADDRESS, walletAddress);
           if (mintable != 0) {
-            toast.error("You're not allowed to mint by USTC.");
+            toast.error("Mint option is not available now.");
             return;
           }
         }
+
+        setDisabled(true);
 
         let msg;
         if (from == "LUNC") {
@@ -185,12 +191,16 @@ const Mintboard = () => {
         );
 
         console.log(txResult);
+
+        setDisabled(false);
       } catch (e) {
-        if (e.response.data.message.startsWith("200 Billion LIMIT")) {
+        if (e.response.data && e.response.data.message && e.response.data.message.startsWith("200 Billion LIMIT")) {
           toast.error("CLSM Circulation Supply is not less than 200B.");
         } else {
           console.log(e);
         }
+
+        setDisabled(false);
       }
     })();
   };
@@ -303,8 +313,6 @@ const Mintboard = () => {
 
   return (
     <>
-      <ToastContainer />
-
       {
         walletAddress ?
           ((NFT_MOON.length == 0 && NFT_FURY.length == 0) ?
@@ -390,7 +398,7 @@ const Mintboard = () => {
 
           <div className="tw-flex tw-justify-center tw-mb-[16px]">
             {walletAddress ? (
-              <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit}>Mint</button>
+              <button className="tw-text-[18px] tw-text-white  tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-px-[12px] tw-py-[6px]" onClick={handleSubmit} disabled={disabled}>Mint</button>
             ) : (
               <ConnectWallet />
             )}

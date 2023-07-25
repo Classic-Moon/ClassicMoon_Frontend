@@ -11,6 +11,8 @@ import useTax from '../context/useTax';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import './Dropboard.css'
+
 const Dropboard = () => {
 
   const releaseDate = 1690072000 * 1000;
@@ -29,14 +31,13 @@ const Dropboard = () => {
 
   const [CLASSICMOON, setClassicMoon] = useState([]);
 
-  const [blocked, setBlocked] = useState(0);
-
   const [last_drop_time, set_last_drop_time] = useState(0);
   const [next_drop_time, set_next_drop_time] = useState(0);
   const [pending_amount, set_pending_amount] = useState(0);
   const [dropped_amount, set_dropped_amount] = useState(0);
   const [vesting, setVesting] = useState(0);
 
+  const [blocked, setBlocked] = useState(0);
   const [disabled, setDisabled] = useState(false);
 
   const convDate = (val) => {
@@ -48,47 +49,15 @@ const Dropboard = () => {
   }
 
   const getAirdrop = () => {
-    // (async () => {
-    //   const NFT_tokenAddress = 'terra15tuwx3r2peluez6sh4yauk4ztry5dg5els4rye534v9n8su5gacs259p77';
-    //   const NFT_FURY = 'terra1g7we2dvzgyfyh39zg44n0rlyh9xh4ym9z0wut7';
-
-    //   const recp = 'terra1675g95dpcxulmwgyc0hvf66uxn7vcrr5az2vuk';
-
-    //   const msg = new MsgExecuteContract(
-    //     walletAddress,
-    //     NFT_FURY,
-    //     {
-    //       transfer_nft: {
-    //         recipient: recp,
-    //         token_id: '984'
-    //       }
-    //     }
-    //   );
-
-    //   // Signing
-    //   const result = await wallet.sign({ msgs: [msg] });
-
-    //   // Broadcast SignResult
-    //   const tx = result.result
-    //   const txResult = await terraClient?.tx.broadcastSync(tx);
-
-    //   console.log(txResult);
-    // })();
-    // return;
 
     if (disabled == true) {
       toast.error("You don't have any CLASSICMOON NFTs.");
       return;
     }
 
-    if (blocked == 1) {
+    if (blocked == true) {
       return;
     }
-
-    setBlocked(1);
-    setTimeout(() => {
-      setBlocked(0);
-    }, 2000);
 
     (async () => {
 
@@ -102,6 +71,8 @@ const Dropboard = () => {
           toast.error('Airdrop will be available after ' + (parseInt((next_drop_time - Date.now()) / DAY) + 1).toString() + ' days later.');
           return;
         }
+
+        setBlocked(true);
 
         let msg = new MsgExecuteContract(
           walletAddress,
@@ -141,8 +112,12 @@ const Dropboard = () => {
         );
 
         console.log(txResult);
+
+        setBlocked(false);
       } catch (e) {
         console.log(e);
+
+        setBlocked(false);
       }
     })();
   };
@@ -157,13 +132,15 @@ const Dropboard = () => {
           set_pending_amount(userInfo.pending_amount);
           set_dropped_amount(userInfo.dropped_amount);
 
+          if (parseInt(userInfo.pending_amount) == 0) {
+            setDisabled(true);
+          }
+
           // Get ClassicMoon NFT Information
           let result = await getNFTList(constants.CLASSICMOON_NFT_Contract_Address, walletAddress);
           setClassicMoon(result.tokens);
 
           const now = Date.now();
-
-          console.log(now, releaseDate + MONTH * 20);
 
           if (releaseDate + MONTH * 20 > now) {
             setVesting(parseInt((releaseDate + MONTH * 20 - now) / MONTH) * CLASSICMOON.length * 5100000 * (10 ** 6));
@@ -172,7 +149,7 @@ const Dropboard = () => {
           setClassicMoon([]);
         }
       } catch (e) {
-        if (e.response.data.message.startsWith("No NFT:")) {
+        if (e.response.data && e.response.data.message && e.response.data.message.startsWith("No NFT:")) {
           toast.error("You don't have any CLASSICMOON NFTs.");
           setDisabled(true);
         } else {
@@ -245,7 +222,7 @@ const Dropboard = () => {
       </div>
 
       {walletAddress ? (
-        <button className="tw-text-[18px] tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => getAirdrop()} disabled={disabled}>Airdrop</button>
+        <button className="tw-text-[18px] tw-bg-[#6812b7cc] hover:tw-bg-[#6812b780] tw-border-[#6812b7] tw-border-solid tw-border-[1px] tw-rounded-lg tw-text-white tw-px-[12px] tw-py-[3px]" onClick={() => getAirdrop()} disabled={disabled || blocked}>Airdrop</button>
       ) : (
         <ConnectWallet />
       )}

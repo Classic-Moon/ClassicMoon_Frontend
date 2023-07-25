@@ -6,6 +6,10 @@
   transform: rotate(135deg);
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 input[type="number"] {
   outline: none;
 }
