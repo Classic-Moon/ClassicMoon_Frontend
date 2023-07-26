@@ -17,8 +17,8 @@ const Dropboard = () => {
 
   const releaseDate = 1690072000 * 1000;
   const DAY = 1000 * 60 * 60 * 24;
-  // const MONTH = DAY * 30;
-  const MONTH = 1000 * 60 * 30;
+  const MONTH = DAY * 30;
+  // const MONTH = 1000 * 60 * 30; // TEST: 30 mins
 
   // Web3
   const wallet = useWallet();
